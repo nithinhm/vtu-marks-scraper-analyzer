@@ -15,6 +15,8 @@ import time
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
+pixel_range = [(i, i, i) for i in range(102, 130)]
+
 def get_captcha_from_image(target_image):
     image_data = BytesIO(target_image)
 
@@ -29,7 +31,7 @@ def get_captcha_from_image(target_image):
         for y in range(height):
             pixel = image.getpixel((x, y))
 
-            if pixel == (102, 102, 102):
+            if pixel in pixel_range:
                 white_image.putpixel((x, y), pixel)
 
     return pytesseract.image_to_string(white_image).strip()
@@ -45,19 +47,15 @@ options.unhandled_prompt_behavior = 'ignore'
 
 
 art = '''
-   *                       (                                                                     (                         
- (  `               )      )\ )                              (                      *   )        )\ )            (    )    
- )\))(     ) (   ( /(     (()/(    (      )         (  (     )\ )     (     (   ( ` )  /(   (   (()/(  (      (  )\( /(    
-((_)()\ ( /( )(  )\())(    /(_)) ( )(  ( /( `  )   ))\ )(   (()/(  (  )(    )\  )\ ( )(_))  )\   /(_))))\(   ))\((_)\()|   
-(_()((_))(_)|()\((_)\ )\  (_))   )(()\ )(_))/(/(  /((_|()\   /(_)) )\(()\  ((_)((_|_(_())_ ((_) (_)) /((_)\ /((_)_(_))/)\  
-|  \/  ((_)_ ((_) |(_|(_) / __| ((_|(_|(_)_((_)_\(_))  ((_) (_) _|((_)((_) \ \ / /|_   _| | | | | _ (_))((_|_))(| | |_((_) 
-| |\/| / _` | '_| / /(_-< \__ \/ _| '_/ _` | '_ \) -_)| '_|  |  _/ _ \ '_|  \ V /   | | | |_| | |   / -_|_-< || | |  _(_-< 
-|_|  |_\__,_|_| |_\_\/__/ |___/\__|_| \__,_| .__/\___||_|    |_| \___/_|     \_/    |_|  \___/  |_|_\___/__/\_,_|_|\__/__/ 
-                                           |_|                                                                             
+ _    __________  __   __  ___           __           _____                                    ___               
+| |  / /_  __/ / / /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____  
+| | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \\
+| |/ / / / / /_/ /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ / 
+|___/ /_/  \____/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/  
+                                                                       /_/                       /_/   /_/       
 '''
 
 print(art)
-
 print("\nWelcome to the VTU marks scraping app.\n\nApp developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083.")
 print("\nProcedure:\n1. Fill the details as mentioned below and press enter.\n2. Sit back and relax.\n3. You can keep an eye on this console to check for status updates or errors that occur.")
 
@@ -189,7 +187,7 @@ while k < final_number and window_is_present:
 
             print(f'\nData successsfully collected for {usn}')
 
-            time.sleep(3)
+            time.sleep(1)
 
             driver.back()
 
