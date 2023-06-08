@@ -19,15 +19,9 @@ Before running the application, ensure that you have the following prerequisites
 - Chrome WebDriver
 - Pytesseract
 
-You can install the required Python dependencies using the following command:
-
-```
-pip install selenium
-```
-
 Make sure to download and configure the Chrome WebDriver according to your system.
 
-For more information on Pytesseract and how to install it, check its [PyPi page](https://pypi.org/project/pytesseract/). And install it in the default directory.
+For more information on Pytesseract and how to install it, check its [PyPi page](https://pypi.org/project/pytesseract/), and install it in the default directory.
 
 ## Usage
 
