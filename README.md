@@ -1,6 +1,6 @@
 # VTU Marks Scraper App 2023
 
-This repository contains an automated tool to collect marks data of students branchwise from the VTU (Visvesvaraya Technological University) website. It provides both the source code and a pre-compiled executable for convenience.
+This repository contains an automated tool to collect marks data of students (branch-wise) from the VTU (Visvesvaraya Technological University) website. It provides both the source code and a pre-compiled executable for convenience.
 
 ## Features
 
@@ -9,6 +9,7 @@ This repository contains an automated tool to collect marks data of students bra
 - Handles the USN entry and CAPTCHA verification automatically
 - Processes the collected data to generate an Excel file
 - Provides an easy-to-use command-line interface (CLI)
+- Handles common errors. If the number of retries crosses the set limit, the data collected till that point will be saved.
 
 ## Prerequisites
 
