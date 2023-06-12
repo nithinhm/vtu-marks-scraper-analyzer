@@ -1,6 +1,6 @@
 # VTU Marks Scraper App 2023
 
-The contents of this repository include an automated tool designed to retrieve and organize student marks data from the VTU (Visvesvaraya Technological University) website in an excel file and which also generates a result analysis for the specified branch, as well as a graphical representation of subject performance in the form of an image file. The repository provides both the source code and a pre-compiled executable for ease of use.
+The contents of this repository include an automated tool designed to retrieve and organize student marks data from the VTU (Visvesvaraya Technological University) website in an excel file and also generate result analysis for the specified branch, as well as a graphical representation of subject performance in the form of an image file. The repository provides both the source code and a pre-compiled executable for ease of use.
 
 ## Features
 
