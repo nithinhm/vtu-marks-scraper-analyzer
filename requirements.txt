@@ -1,5 +1,8 @@
 beautifulsoup4==4.11.1
+matplotlib==3.5.1
+numpy==1.22.2
 pandas==1.4.1
 Pillow==9.4.0
 pytesseract==0.3.10
-selenium==4.9.1
+Requests==2.31.0
+selenium==4.10.0
