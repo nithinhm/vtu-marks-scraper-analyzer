@@ -19,15 +19,9 @@ Before running the application, ensure that you have the following prerequisites
 - Chrome WebDriver
 - Pytesseract
 
-You can install the required Python dependencies using the following command:
-
-```
-pip install selenium
-```
-
 Make sure to download and configure the Chrome WebDriver according to your system.
 
-For more information on Pytesseract and how to install it, check its [PyPi page](https://pypi.org/project/pytesseract/). And install it in the default directory.
+Install Pytesseract (for WIndows) using the [installer](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
 
 ## Usage
 
@@ -63,7 +57,7 @@ python "vtu marks scraper app by nithinhm.py"
 
 ## Executable
 
-Alternatively, you can use the pre-compiled executable file located in the `dist` subfolder of this repository. The executable is compiled using PyInstaller and does not require Python installation.
+Alternatively, you can use the pre-compiled executable file located in the `dist` subfolder of this repository. The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
 Run the executable by double-clicking it or using the command line.
 
