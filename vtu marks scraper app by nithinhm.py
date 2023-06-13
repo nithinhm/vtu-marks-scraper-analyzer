@@ -321,17 +321,32 @@ while not to_quit:
     overall_column = df2[df2.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
     temp_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
 
+    result_cases = ['A', 'P', 'F', 'W', 'X']
+    not_present1 = list(set(result_cases) - set(list(temp_df.columns)))
+
+    if len(not_present1) > 0:
+        for i in not_present1:
+            temp_df[i] = 0
+
     students_passed_all = sum(temp_df['F'] == 0)
     students_failed = sum(temp_df['F'] > 0)
     students_failed_one = sum(temp_df['F'] == 1)
     students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
     overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
 
-    stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall_pass_percentage':overall_pass_percentage}, name='')
+    stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall pass percentage':overall_pass_percentage}, name='')
 
     result_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
     result_df.columns = [x[0] for x in result_df.columns]
-    result_df = result_df.T.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
+    result_df = result_df.T
+    not_present2 = list(set(result_cases) - set(list(result_df.columns)))
+
+    if len(not_present2) > 0:
+        for i in not_present2:
+            result_df[i] = 0
+    
+    result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
+
     pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
     result_df['Subject Pass Percentage'] = pass_percentage_column
 
