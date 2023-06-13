@@ -62,7 +62,7 @@ internet_off = True
 to_quit = False
 
 while internet_off:
-    print("Checking your internet connection...\n")
+    print("\nChecking your internet connection...\n")
     try:
         response = requests.get('https://www.google.com')
 
@@ -75,7 +75,8 @@ while internet_off:
             internet_off = False
         else:
             print("Please check your internet connection and try again.")
-        
+            
+    finally:
         if internet_off:
             check_again = input('\nWould you like to check again (A) or quit (Q)?: ').strip().upper()
             if check_again == 'Q':
@@ -192,8 +193,6 @@ while not to_quit:
 
     window_is_present = True
 
-    print("\n")
-
     while k < final_number and window_is_present:
         
         k += 1
@@ -227,7 +226,7 @@ while not to_quit:
 
                 print(f'\nData successsfully collected for {usn}')
 
-                time.sleep(1)
+                time.sleep(2)
 
                 driver.back()
 
@@ -320,18 +319,20 @@ while not to_quit:
     first_USN, last_USN = collected_usns[0], collected_usns[-1]
 
     overall_column = df2[df2.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
-    failed_column = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)['F']
+    temp_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
 
-    students_passed_all = sum(failed_column == 0)
-    students_failed = sum(failed_column > 0)
-    student_failed_one = sum(failed_column == 1)
-    students_attempted = sum(failed_column >= 0)
-    overall_pass_percentage = students_passed_all/students_attempted*100
+    students_passed_all = sum(temp_df['F'] == 0)
+    students_failed = sum(temp_df['F'] > 0)
+    students_failed_one = sum(temp_df['F'] == 1)
+    students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
+    overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
+
+    stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall_pass_percentage':overall_pass_percentage}, name='')
 
     result_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
     result_df.columns = [x[0] for x in result_df.columns]
     result_df = result_df.T.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
-    pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/sum(x)*100, 2), axis=1)
+    pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
     result_df['Subject Pass Percentage'] = pass_percentage_column
 
     labels = [x.split('(')[-1][:-1] for x in result_df.index]
@@ -360,10 +361,11 @@ while not to_quit:
 
     df2['Overall_Total'] = overall_column
 
-    file_path_excel = os.path.join(folder_path, f'20{batch} {branch} {first_USN} to {last_USN} VTU results.xlsx')
+    file_path_excel = os.path.join(folder_path, f'20{batch} {branch} semester {semester} {first_USN} to {last_USN} VTU results.xlsx')
 
     with pd.ExcelWriter(file_path_excel) as writer:
         df2.to_excel(writer, sheet_name='Student-wise results')
+        stats_df.to_excel(writer, sheet_name='Stats of students')
         result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
 
     print(f'\nData collected for USNs {first_USN} to {last_USN} and saved in an excel file.\nResult analysis also saved.')
