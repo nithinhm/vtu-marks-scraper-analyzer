@@ -59,7 +59,7 @@ python "vtu marks scraper app by nithinhm.py"
 
 ## Executable
 
-Alternatively, you can use the pre-compiled executable file located in the `dist` subfolder of this repository. The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use [this pre-compiled executable file](https://drive.google.com/file/d/1b-AIg2RdVIK7sYw9fpQu1y9DFOlVV622/view?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
 Run the executable by double-clicking it or using the command line.
 

@@ -1,3 +1,7 @@
+from tkinter import *
+from tkinter import messagebox
+from tkinter import ttk
+from tkinter import scrolledtext
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -12,11 +16,13 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import time
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import os
 import requests
+import threading
 
-
+matplotlib.use('agg')
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 pixel_range = [(i, i, i) for i in range(102, 130)]
@@ -40,166 +46,147 @@ def get_captcha_from_image(target_image):
 
     return pytesseract.image_to_string(white_image).strip()
 
-
-art = '''
+art = r'''
  _    __________  __   __  ___           __           _____                                    ___               
 | |  / /_  __/ / / /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____  
-| | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \\
+| | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \ 
 | |/ / / / / /_/ /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ / 
 |___/ /_/  \____/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/  
                                                                        /_/                       /_/   /_/       
 '''
 
-
-skipped_usns = []
-data_dict = {}
-
 service = ChromeService(executable_path='/chromedriver.exe')
 options = Options()
 options.unhandled_prompt_behavior = 'ignore'
+#options.add_argument("--headless=new")
 
-internet_off = True
-to_quit = False
+default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
 
-while internet_off:
-    print("\nChecking your internet connection...\n")
+def check_connection():
+    wait = Toplevel()
+    wait.title('Just a moment')
+    wait_label = Label(wait, text='Checking your internet connection...', width=30)
+    wait_label.pack(padx=20, pady=5)
+
     try:
-        response = requests.get('https://www.google.com')
+        response = requests.get('https://google.com')
+        if response.status_code == 200:
+            wait.destroy()
+        else:
+            raise requests.exceptions.RequestException
 
     except requests.exceptions.RequestException:
-        print("Please check your internet connection and try again.")
+        check_again = messagebox.askretrycancel(title='Internet Status', message='Internet is not connected.\n\nWould you like to retry?\n\nPresss Cancel to quit the app.')
+        if not check_again:
+            window.destroy()
+        else:
+            wait.destroy()
+            check_connection()
 
+def get_entry_widgets():
+    return [e for e in form.winfo_children() if isinstance(e, ttk.Entry)]
+
+def set_default_values():
+    for i, entry_widget in enumerate(get_entry_widgets()):
+        entry_widget.delete(0, 'end')
+        entry_widget.insert(0, default_values[i])
+
+def get_values():
+    entry_widgets = get_entry_widgets()
+    values = [e.get().upper().strip() for e in entry_widgets[:-1]] + [entry_widgets[-1].get().strip()]
+    return tuple(values)
+
+def toggle_entries(state):
+    for entry_widget in get_entry_widgets():
+        entry_widget.config(state=state)
+
+def check_error():
+    error_list = []
+
+    code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
+
+    if len(code_value) != 3 or (not isinstance(int(code_value[0]), int)) or (not isinstance(code_value[1:], str)):
+        error_list.append('Code Error! Enter a valid 3-character college code.')
+    if len(batch_value) != 2 or (not isinstance(int(batch_value), int)):
+        error_list.append('Batch Error! Enter a valid 2-digit batch number.')
+    if len(branch_value) != 2:
+        error_list.append('Branch Error! Enter a valid 2-character branch.')
+    if int(firstnum_value) < 1 or int(firstnum_value) > 999:
+        error_list.append('First USN Error! Enter a valid 3-digit first USN number.')
+    if int(lastnum_value) < 1 or int(lastnum_value) > 999:
+        error_list.append('Last USN Error! Enter a valid 3-digit last USN number.')
+    if int(sem_value) < 1 or int(sem_value) > 8:
+        error_list.append('Semester Error! Enter a valid semester number.')
+    if not isinstance(int(delay_value), int):
+        error_list.append('Delay Error! Enter a valid number for the delay.')
+    if not isinstance(int(retries_value), int):
+        error_list.append('Retries Error! Enter a valid number for the number of retries.')
+    if 'https://' not in url_value:
+        error_list.append('URL Error! Please include https:// in the URL.')
+
+    if len(error_list) == 0:
+        message = 'Here are the values that you entered:\n\n'+'\n'.join([f'Code: {code_value}', f'Batch: {batch_value}', f'Branch: {branch_value}', f'First USN: {firstnum_value}', f'Last USN: {lastnum_value}', f'Semester: {sem_value}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nIf you wish to proceed, press Yes.\nIf you wish to change any values, press No.'
+        answer = messagebox.askyesno(title='Confirmation', message=message)
+
+        if answer:
+            toggle_entries('disabled')
+            verify_button.config(state='disabled')
+            reset_button.config(state='normal')
+            collect_button.config(state='normal')
+    
     else:
-        if response.status_code == 200:
-            print("Internet is working.")
-            internet_off = False
-        else:
-            print("Please check your internet connection and try again.")
-            
-    finally:
-        if internet_off:
-            check_again = input('\nWould you like to check again (A) or quit (Q)?: ').strip().upper()
-            if check_again == 'Q':
-                to_quit = True
-                break
+        message = 'Kindly correct the following error(s) before proceeding:\n\n'+'\n'.join(error_list)
+        answer = messagebox.showerror(title='ERROR', message=message)
 
+def reset_entries():
+    toggle_entries('normal')
+    set_default_values()
+    verify_button.config(state='normal')
+    reset_button.config(state='disabled')
+    collect_button.config(state='disabled')
 
-while not to_quit:
-    print(art)
-    print("\nWelcome to the VTU marks scraping app.\n\nApp developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083.")
-    print("\nProcedure:\n1. Fill the details as mentioned below and press enter.\n2. Sit back and relax.\n3. You can keep an eye on this console to check for status updates or errors that occur.")
+def try_again():
+    toggle_entries('normal')
+    verify_button.config(state='normal')
+    progress.config(value=0)
 
-    print('\nExample USN: 1AM22CS010')
+def status_update(statement):
+    statusbox.config(state='normal')
+    statusbox.insert(END, statement+'\n')
+    statusbox.see(END)
+    statusbox.config(state='disabled')
 
-    while True:
-        try:
-            coll_code = input('\nEnter your college code as in USN (Ex: 1AM): ').upper().strip()
-        except:
-            print('Error! Enter a valid 3-character code.')
-        else:
-            if len(coll_code) != 3 or (not isinstance(int(coll_code[0]), int)) or (not isinstance(coll_code[1:], str)):
-                print('Error! Enter a valid 3-character code.')
-            else:
-                break
-
-    while True:
-        try:
-            batch = int(input('\nEnter batch year as in USN (Ex: 22 or 21 or 19): ').strip())
-        except:
-            print('Error! Enter a valid 2-digit number.')
-        else:
-            batch = str(batch)
-            if len(batch) != 2:
-                print('Error! Enter a valid 2-digit number.')
-            else:
-                break
-
-    while True:
-        try:
-            branch = input('\nEnter branch as in USN (Ex: CS or MT or CI): ').upper().strip()
-        except:
-            print('Error! Enter a valid 2-character branch.')
-        else:
-            if len(branch) != 2:
-                print('Error! Enter a valid 2-character branch.')
-            else:
-                break
-
-    while True:
-        try:
-            first_number = int(input("\nEnter the first number of this branch's USN (Ex: 1 or 25 or 140): ").strip())
-        except:
-            print('Error! Enter a valid 3-digit number.')
-        else:
-            if first_number < 1 or first_number > 999:
-                print('Error! Enter a valid 3-digit number.')
-            else:
-                break
-
-    while True:
-        try:
-            final_number = int(input("\nEnter the last number of this branch's USN (Ex: 5 or 23 or 145): ").strip())
-        except:
-            print('Error! Enter a valid 3-digit number.')
-        else:
-            if final_number < 1 or final_number > 999:
-                print('Error! Enter a valid 3-digit number.')
-            else:
-                break
-
-    while True:
-        try:
-            semester = int(input("\nEnter the semester number (Ex: 1 or 2): ").strip())
-        except:
-            print('Error! Enter a valid number.')
-        else:
-            if semester < 1 or semester > 8:
-                print('Error! Enter a valid semester number.')
-            else:
-                break
-
-    while True:
-        try:
-            retry_delay = int(input('\nIf there are network issues, how many seconds do you wish to wait before retrying again?: ').strip())
-        except:
-            print('Error! Enter a valid number.')
-        else:
-            break
-
-    while True:
-        try:
-            max_retries = int(input('\nHow many times do you wish to retry before ending the session?: ').strip())
-        except:
-            print('Error! Enter a valid number.')
-        else:
-            break
-
-    while True:
-        try:
-            url = input('\nEnter the URL of the results login page (which contains fields for entering USN and CAPTCHA; it should start with https://): ').strip()
-        except:
-            print('Error! Enter a valid url.')
-        else:
-            if 'https://' not in url:
-                print("Error! Please include https:// in the url.")
-            else:
-                break
-
-    driver = webdriver.Chrome(service=service, options=options)
-
-    driver.get(url)
-
-    k = first_number - 1
-
+def start_app():
+    skipped_usns = []
+    data_dict = {}
     window_is_present = True
+    to_quit = False
 
-    while k < final_number and window_is_present:
-        
+    code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
+
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get(url_value)
+    except:
+        messagebox.showerror(title='Connection Error', message='There was an unknown error.\n\nPlease try again after some time.')
+        window_is_present = False
+        to_quit = True
+        try_again()
+    else:
+        progress.grid(column=0, row=0, columnspan=2)
+        statusbox.grid(column=0, row=1, columnspan=2, pady=20)
+        statusbox.config(state='normal')
+        statusbox.delete('1.0', END)
+        statusbox.config(state='disabled')
+
+    k = int(firstnum_value) - 1
+
+    while k < int(lastnum_value) and window_is_present and not to_quit:
         k += 1
         this_retry = 0
-        while this_retry < max_retries:
+        while this_retry < int(retries_value):
             try:
-                usn = f'{coll_code}{batch}{branch}{k:03d}'
+                usn = f'{code_value}{batch_value}{branch_value}{k:03d}'
 
                 driver.find_element(By.NAME, 'lns').send_keys(usn)
 
@@ -207,7 +194,7 @@ while not to_quit:
                 captcha_text = get_captcha_from_image(captcha_image)
 
                 if len(captcha_text) != 6:
-                    print("\nError! Tried reading CAPTCHA. The length was invalid. Trying again.")
+                    status_update('Length of the read CAPTCHA was invalid. Trying again.\n')
                     driver.refresh()
                     continue
 
@@ -224,7 +211,9 @@ while not to_quit:
 
                 data_dict[f'{student_usn}+{student_name}'] = marks_data
 
-                print(f'\nData successsfully collected for {usn}')
+                status_update(f'Data successsfully collected for {usn}\n')
+
+                progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
 
                 time.sleep(2)
 
@@ -236,157 +225,249 @@ while not to_quit:
                 alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
                 alert_text = alert.text
 
-                print(f'\nError for {usn} because {alert_text}.')
+                status_update(f'Error for {usn} because {alert_text}.')
 
                 if alert_text == 'University Seat Number is not available or Invalid..!':
-                    print('Moving to the next USN.')
+                    status_update('Moving to the next USN.\n')
                     k += 1
                     skipped_usns.append(usn)
                     alert.accept()
+                    break
                 else:
-                    print('Trying again.')
+                    status_update('Trying again.\n')
                     alert.accept()
 
             except NoSuchWindowException:
-                print('\nError! Window closed prematurely. Data collected so far will be saved.')
+                messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
                 window_is_present = False
+                to_quit = True
+                try_again()
                 break
 
             except:
                 soup2 = BeautifulSoup(driver.page_source, 'lxml')
                 occur = soup2.find_all('b', string='University Seat Number')
                 if len(occur) > 0:
-                    print(f'\nThere was an error collecting data for {usn}. Trying again.')
+                    status_update(f'There was an error collecting data for {usn}. Trying again.\n')
                     driver.back()
                 else:
-                    print(f'\nError! Retrying after {retry_delay} seconds. Retry {this_retry+1} of {max_retries}')
+                    status_update(f'Error! Retrying after {delay_value} seconds. Retry {this_retry+1} of {retries_value}\n')
                     this_retry += 1
-                    time.sleep(retry_delay)
-                    driver.refresh()
+                    time.sleep(int(delay_value))
+                    try:
+                        driver.refresh()
+                    except:
+                        messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
+                        window_is_present = False
+                        to_quit = True
+                        try_again()
+                        break
 
         else:
             try:
-                print(f'\nMaximum number of retries reached ({max_retries}). Data collected so far will be saved.')
+                messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
             except NoSuchWindowException:
-                print('\nError! Window closed prematurely. Data collected so far will be saved.')
+                messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
                 window_is_present = False
+                try_again()
             finally:
+                to_quit = True
+                window.quit()
                 break
 
     driver.quit()
 
-    if len(skipped_usns) > 0:
-        print(f'\nThese USNs were skipped {skipped_usns}.')
-    else:
-        print('\nNo USNs were skipped.')
+    if not to_quit:
+        if len(skipped_usns) > 0:
+            status_update(f'These USNs were skipped {skipped_usns}.\n')
+        else:
+            status_update('No USNs were skipped.\n')
 
-    list_of_student_dfs = []
+        list_of_student_dfs = []
 
-    for id, marks_data in data_dict.items():
+        for id, marks_data in data_dict.items():
 
-        this_usn, this_name = tuple(id.split('+'))
-        rows = marks_data.find_all('div', class_='divTableRow')
+            this_usn, this_name = tuple(id.split('+'))
+            rows = marks_data.find_all('div', class_='divTableRow')
 
-        data = []
-        for row in rows:
-            cells = row.find_all('div', class_='divTableCell')
-            data.append([cell.text.strip() for cell in cells])
+            data = []
+            for row in rows:
+                cells = row.find_all('div', class_='divTableCell')
+                data.append([cell.text.strip() for cell in cells])
+            
+            df_temp = pd.DataFrame(data[1:], columns=data[0])
+
+            subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
+            headers = df_temp.columns[2:-1]
+
+            ready_columns = [(name, header) for name in subjects for header in headers]
+
+            student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')] + ready_columns).T
+            student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
+
+            list_of_student_dfs.append(student_df)
+
+        final_df = pd.concat(list_of_student_dfs).reset_index(drop=True)
+
+        cols = list(final_df.columns)[2:]
+        cols.sort(key = lambda x: x[0].split('(')[-1][5:-1])
+        final_df = final_df[[('USN',''), ('Student Name','')] + cols]
+
+        final_df.index += 1
+
+        df2 = final_df.apply(pd.to_numeric, errors='ignore')
+
+        collected_usns = list(df2['USN'])
+
+        first_USN, last_USN = collected_usns[0], collected_usns[-1]
+
+        overall_column = df2[df2.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
+        temp_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
+
+        result_cases = ['A', 'P', 'F', 'W', 'X']
+        not_present1 = list(set(result_cases) - set(list(temp_df.columns)))
+
+        if len(not_present1) > 0:
+            for i in not_present1:
+                temp_df[i] = 0
+
+        students_passed_all = sum(temp_df['F'] == 0)
+        students_failed = sum(temp_df['F'] > 0)
+        students_failed_one = sum(temp_df['F'] == 1)
+        students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
+        overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
+
+        stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall pass percentage':overall_pass_percentage}, name='')
+
+        result_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
+        result_df.columns = [x[0] for x in result_df.columns]
+        result_df = result_df.T
+        not_present2 = list(set(result_cases) - set(list(result_df.columns)))
+
+        if len(not_present2) > 0:
+            for i in not_present2:
+                result_df[i] = 0
         
-        df_temp = pd.DataFrame(data[1:], columns=data[0])
+        result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
 
-        subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
-        headers = df_temp.columns[2:-1]
+        pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
+        result_df['Subject Pass Percentage'] = pass_percentage_column
 
-        ready_columns = [(name, header) for name in subjects for header in headers]
+        labels = [x.split('(')[-1][:-1] for x in result_df.index]
 
-        student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')] + ready_columns).T
-        student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
+        x = np.arange(len(labels))
 
-        list_of_student_dfs.append(student_df)
+        fig, ax = plt.subplots(figsize=(15,7))
+        ax.bar(x, pass_percentage_column)
 
-    final_df = pd.concat(list_of_student_dfs).reset_index(drop=True)
+        ax.set_xlabel('Subject Code', fontsize='x-large')
+        ax.set_ylabel('Pass Percentage', fontsize='x-large')
+        ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
+        ax.set_xticks(x, labels, fontsize='x-large')
+        ax.set_yticks(ax.get_yticks(), fontsize='large')
 
-    cols = list(final_df.columns)[2:]
-    cols.sort(key = lambda x: x[0].split('(')[-1][5:-1])
-    final_df = final_df[[('USN',''), ('Student Name','')] + cols]
+        for i,v in enumerate(result_df.index):
+            ax.text(i, pass_percentage_column[i]+2, result_df.loc[v, 'Subject Pass Percentage'], ha='center', fontsize='x-large')
 
-    final_df.index += 1
+        fig.tight_layout()
 
-    df2 = final_df.apply(pd.to_numeric, errors='ignore')
+        folder_path = f'20{batch_value} {branch_value} semester {sem_value} VTU results'
+        os.makedirs(folder_path, exist_ok=True)
+        file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {branch_value} branch students.jpg')
 
-    collected_usns = list(df2['USN'])
+        fig.savefig(file_path_image)
 
-    first_USN, last_USN = collected_usns[0], collected_usns[-1]
+        df2['Overall_Total'] = overall_column
 
-    overall_column = df2[df2.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
-    temp_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
+        file_path_excel = os.path.join(folder_path, f'20{batch_value} {branch_value} semester {sem_value} {first_USN} to {last_USN} VTU results.xlsx')
 
-    result_cases = ['A', 'P', 'F', 'W', 'X']
-    not_present1 = list(set(result_cases) - set(list(temp_df.columns)))
+        with pd.ExcelWriter(file_path_excel) as writer:
+            df2.to_excel(writer, sheet_name='Student-wise results')
+            stats_df.to_excel(writer, sheet_name='Stats of students')
+            result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
 
-    if len(not_present1) > 0:
-        for i in not_present1:
-            temp_df[i] = 0
+        continue_app = messagebox.askyesno(title='Continue?', message=f'Data collected for USNs {first_USN} to {last_USN} and saved in an excel file.\nResult analysis also saved.\n\nPress YES to continue to collect data of other students.\n\nPress No to quit the app.')
+        if not continue_app:
+            window.quit()
+        else:
+            try_again()
 
-    students_passed_all = sum(temp_df['F'] == 0)
-    students_failed = sum(temp_df['F'] > 0)
-    students_failed_one = sum(temp_df['F'] == 1)
-    students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
-    overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
+def start_thread():
+    for button in buttons.winfo_children():
+        button.config(state='disabled')
+    threading.Thread(target=start_app).start()
 
-    stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall pass percentage':overall_pass_percentage}, name='')
+window = Tk()
+window.title('VTU Marks Scraper App')
+window.config(padx=30, pady=30)
 
-    result_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
-    result_df.columns = [x[0] for x in result_df.columns]
-    result_df = result_df.T
-    not_present2 = list(set(result_cases) - set(list(result_df.columns)))
+form = Frame(window)
+form.grid()
 
-    if len(not_present2) > 0:
-        for i in not_present2:
-            result_df[i] = 0
-    
-    result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
+Label(form, text=art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
 
-    pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
-    result_df['Subject Pass Percentage'] = pass_percentage_column
+Label(form, font=('Segoe UI',10), text='Region+College code (Ex: 1AM or 2KE etc): ').grid(column=0, row=1, sticky='e')
+code_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+code_entry.grid(column=1, row=1)
 
-    labels = [x.split('(')[-1][:-1] for x in result_df.index]
+Label(form, font=('Segoe UI',10), text='Batch (Ex: 22 or 21 etc): ').grid(column=0, row=2, sticky='e')
+batch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+batch_entry.grid(column=1, row=2)
 
-    x = np.arange(len(labels))
+Label(form, font=('Segoe UI',10), text='Branch (Ex: CS or MT or CI etc): ').grid(column=0, row=3, sticky='e')
+branch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+branch_entry.grid(column=1, row=3)
 
-    fig, ax = plt.subplots(figsize=(15,7))
-    ax.bar(x, pass_percentage_column)
+Label(form, font=('Segoe UI',10), text='First Number in USN (Ex: 1 or 25 etc): ').grid(column=0, row=4, sticky='e')
+firstnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+firstnum_entry.grid(column=1, row=4)
 
-    ax.set_xlabel('Subject Code', fontsize='x-large')
-    ax.set_ylabel('Pass Percentage', fontsize='x-large')
-    ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
-    ax.set_xticks(x, labels, fontsize='x-large')
-    ax.set_yticks(ax.get_yticks(), fontsize='large')
+Label(form, font=('Segoe UI',10), text='Last Number in USN (Ex: 5 or 50 etc): ').grid(column=0, row=5, sticky='e')
+lastnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+lastnum_entry.grid(column=1, row=5)
 
-    for i,v in enumerate(result_df.index):
-        ax.text(i, pass_percentage_column[i]+2, result_df.loc[v, 'Subject Pass Percentage'], ha='center', fontsize='x-large')
+Label(form, font=('Segoe UI',10), text='Semester (Ex: 1 or 2 etc): ').grid(column=0, row=6, sticky='e')
+sem_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+sem_entry.grid(column=1, row=6)
 
-    fig.tight_layout()
+Label(form, font=('Segoe UI',10), text='Retry time delay: ').grid(column=0, row=7, sticky='e')
+delay_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+delay_entry.grid(column=1, row=7)
 
-    folder_path = f'20{batch} {branch} semester {semester} VTU results'
-    os.makedirs(folder_path, exist_ok=True)
-    file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {branch} branch students.jpg')
+Label(form, font=('Segoe UI',10), text='Number of retries: ').grid(column=0, row=8, sticky='e')
+retries_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+retries_entry.grid(column=1, row=8)
 
-    fig.savefig(file_path_image)
+Label(form, font=('Segoe UI',10), text='Result page URL (starts with https://): ').grid(column=0, row=9, sticky='e')
+url_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+url_entry.grid(column=1, row=9)
 
-    df2['Overall_Total'] = overall_column
+buttons = Frame(window)
+buttons.grid(column=0, row=10)
 
-    file_path_excel = os.path.join(folder_path, f'20{batch} {branch} semester {semester} {first_USN} to {last_USN} VTU results.xlsx')
+verify_button = ttk.Button(buttons, text='Verify', command=check_error, width=15)
+verify_button.grid(column=0, row=0, padx=20, pady=20)
 
-    with pd.ExcelWriter(file_path_excel) as writer:
-        df2.to_excel(writer, sheet_name='Student-wise results')
-        stats_df.to_excel(writer, sheet_name='Stats of students')
-        result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
+collect_button = ttk.Button(buttons, text='Collect', command=start_thread, width=15, state='disabled')
+collect_button.grid(column=2, row=0, padx=20, pady=20)
 
-    print(f'\nData collected for USNs {first_USN} to {last_USN} and saved in an excel file.\nResult analysis also saved.')
-    continue_app = input('\nWould you like to continue for other students as well? (Y/N): ').strip().upper()
+reset_button = ttk.Button(buttons, text='Reset', command=reset_entries, width=15, state='disabled')
+reset_button.grid(column=1, row=0, padx=20, pady=20)
 
-    if continue_app == 'N':
-        to_quit = True
+status_progress = Frame(window)
+status_progress.grid(column=0, row=11)
 
-input("\nPress enter to close this app.")
+progress = ttk.Progressbar(status_progress, orient='horizontal', length=500, mode='determinate')
+
+statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=10, font=('Segoe UI', 10))
+
+my_credit = Frame(window)
+my_credit.grid(column=0, row=12, columnspan=2)
+
+Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
+
+check_connection()
+
+set_default_values()
+
+window.mainloop()
