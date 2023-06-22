@@ -56,9 +56,6 @@ art = r'''
 '''
 
 service = ChromeService(executable_path='/chromedriver.exe')
-options = Options()
-options.unhandled_prompt_behavior = 'ignore'
-options.add_argument("--headless=new")
 
 default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
 to_abort = False
@@ -77,20 +74,23 @@ def check_connection():
     wait_label.pack(padx=20, pady=5)
 
     try:
-        response = requests.get('https://google.com')
-        if response.status_code == 200:
-            wait.destroy()
-            messagebox.showinfo(title='Internet Status', message='Internet is connected.\n\nPresss OK to continue.')
-            reset_entries()
-        else:
-            raise requests.exceptions.RequestException
+        options = Options()
+        options.add_argument("--headless=new")
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get('https://www.feynmanlectures.caltech.edu/III_toc.html')
+        wait.destroy()
+        driver.quit()
+        messagebox.showinfo(title='Internet Status', message='Internet is connected.\n\nPresss OK to continue.')
+        reset_entries()
 
-    except requests.exceptions.RequestException:
+    except:
         check_again = messagebox.askretrycancel(title='Internet Status', message='Internet is not connected.\n\nWould you like to retry?\n\nPresss Cancel to quit the app.')
         if not check_again:
+            driver.quit()
             window.quit()
         else:
             wait.destroy()
+            driver.quit()
             check_connection()
 
 def get_entry_widgets():
@@ -193,7 +193,7 @@ def start_app():
         return
     else:
         loading_label.grid_remove()
-        status_progress.grid(column=0, row=11)
+        status_progress.grid(column=0, row=11, pady=5)
         progress.grid(column=0, row=0, columnspan=2)
         statusbox.grid(column=0, row=1, columnspan=2, pady=20)
         statusbox.config(state='normal')
@@ -202,7 +202,7 @@ def start_app():
 
     k = int(firstnum_value) - 1
 
-    while k < int(lastnum_value) and not to_abort:
+    while k < int(lastnum_value):
         k += 1
         this_retry = 0
 
@@ -275,20 +275,20 @@ def start_app():
                         driver.refresh()
 
             else:
-                messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
-                try_again()
-                break
+                if to_abort:
+                    messagebox.showwarning(title='ABORT', message='You have aborted the data collection process. Data collected so far (if any) will be saved.')
+                    status_update('ABORTED\n')
+                    try_again()
+                    break
+                else:
+                    messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
+                    try_again()
+                    break
                     
         except:
             messagebox.showerror(title='Unknown Error', message='There was an unknown error.\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
             try_again()
             break
-        
-    else:
-        if to_abort:
-            messagebox.showwarning(title='ABORT', message='You have aborted the data collection process. Data collected so far (if any) will be saved.')
-            status_update('ABORTED')
-            try_again()
     
     driver.quit()
 
@@ -412,6 +412,12 @@ def start_app():
         try_again()
 
 def start_thread():
+    global options
+    options = Options()
+    options.unhandled_prompt_behavior = 'ignore'
+    if not messagebox.askyesno(title='Look at Process', message='Do you wish to look at the automated data collection process?'):
+        options.add_argument("--headless=new")
+
     for button in buttons.winfo_children():
         button.config(state='disabled')
 
@@ -482,7 +488,7 @@ loading_label = Label(window, font=('Segoe UI',11), text='Loading...')
 
 status_progress = Frame(window)
 
-progress = ttk.Progressbar(status_progress, orient='horizontal', length=500, mode='determinate')
+progress = ttk.Progressbar(status_progress, orient='horizontal', length=550, mode='determinate')
 
 statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=10, font=('Segoe UI', 10))
 
