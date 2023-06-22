@@ -1,6 +1,6 @@
 # VTU Marks Scraper App 2023
 
-The contents of this repository include an automated tool designed to retrieve and organize student marks data from the VTU (Visvesvaraya Technological University) website in an excel file and also generate result analysis for the specified branch, as well as a graphical representation of subject performance in the form of an image file. The repository provides both the source code and a pre-compiled executable for ease of use.
+The contents of this repository include an automated tool designed to retrieve and organize student marks data from the VTU (Visvesvaraya Technological University) website in an excel file and also generate result analysis for the specified branch, as well as a graphical representation of subject performance in the form of an image file. The repository provides both the source code and a pre-compiled executable (GUI) for ease of use.
 
 ## Features
 
@@ -8,7 +8,7 @@ The contents of this repository include an automated tool designed to retrieve a
 - Supports automation using Selenium WebDriver
 - Handles the USN entry and CAPTCHA verification automatically
 - Processes the collected data to generate an Excel file
-- Provides an easy-to-use command-line interface (CLI)
+- Provides an easy-to-use graphical-user interface (GUI)
 - Handles common errors. If the number of retries crosses the set limit, the data collected till that point will be saved.
 
 ## Prerequisites
@@ -21,7 +21,7 @@ Before running the application, ensure that you have the following prerequisites
 
 Make sure to download and configure the Chrome WebDriver according to your system.
 
-Install Pytesseract (for WIndows) using the [installer](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
+Install [Pytesseract (for WIndows)](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
 
 ## Usage
 
@@ -46,12 +46,12 @@ pip install -r requirements.txt
 4. Run the application using Python:
 
 ```
-python "vtu marks scraper app by nithinhm.py"
+python "vtu marks scraper app by nithinhm - GUI.py"
 ```
 
-5. Follow the prompts and enter the required information, such as the college code, branch code, batch year etc.
+5. Enter the required information, such as the college code, branch code, batch year etc.
 
-6. Sit back and relax while the tool collects the marks data for all students and generates the Excel file.
+6. Click Verify to verify the input. If the entered data is valid, you can click Collect. Next, sit back and relax while the tool collects the marks data for the specified students and generates an Excel file.
 
 7. Once the process is complete, you will find the processed marks data in an Excel file named `20{batch} {branch} semester {number} {first_USN} to {last_USN} VTU results.xlsx` within the appropriate subfolder in the same directory.
 
@@ -59,9 +59,9 @@ python "vtu marks scraper app by nithinhm.py"
 
 ## Executable
 
-Alternatively, you can download and use [this pre-compiled executable file](https://drive.google.com/file/d/1b-AIg2RdVIK7sYw9fpQu1y9DFOlVV622/view?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use [this pre-compiled executable file](https://drive.google.com/file/d/1Cc-0kfdneE3ezYS-UWVfCQm2AGdMZnoj/view?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
-Run the executable by double-clicking it or using the command line.
+Run the executable by double-clicking it.
 
 ## License
 
@@ -75,7 +75,7 @@ Please ensure that your contributions align with the project's coding style and 
 
 ## Acknowledgements
 
-This project was inspired by the need to automate the laborious procedure of collection of marks data from the VTU website. Special thanks to the open-source community for their valuable resources and tools.
+This project was inspired by the need to automate the laborious procedure of collection of marks data from the VTU website. Special thanks to the open-source community for their valuable resources and tools. And a big shoutout to [Suhas P K](https://github.com/suhaspk) for his constant feedback, suggestions, and code-breaking!
 
 ## Contact
 
@@ -83,6 +83,6 @@ For any inquiries or suggestions, please contact the project maintainer:
 
 Prof. Nithin H M
 
-Email: nithin.manju@amceducation.in
+Email: nithinmanju111@gmail.com
 
 Feel free to reach out with any questions or feedback you may have.

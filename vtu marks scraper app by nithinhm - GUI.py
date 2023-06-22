@@ -58,9 +58,17 @@ art = r'''
 service = ChromeService(executable_path='/chromedriver.exe')
 options = Options()
 options.unhandled_prompt_behavior = 'ignore'
-#options.add_argument("--headless=new")
+options.add_argument("--headless=new")
 
 default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
+to_abort = False
+
+def check_connection_thread():
+    toggle_entries('disabled')
+    for button in buttons.winfo_children():
+        button.config(state='disabled')
+
+    threading.Thread(target=check_connection).start()
 
 def check_connection():
     wait = Toplevel()
@@ -72,13 +80,15 @@ def check_connection():
         response = requests.get('https://google.com')
         if response.status_code == 200:
             wait.destroy()
+            messagebox.showinfo(title='Internet Status', message='Internet is connected.\n\nPresss OK to continue.')
+            reset_entries()
         else:
             raise requests.exceptions.RequestException
 
     except requests.exceptions.RequestException:
         check_again = messagebox.askretrycancel(title='Internet Status', message='Internet is not connected.\n\nWould you like to retry?\n\nPresss Cancel to quit the app.')
         if not check_again:
-            window.destroy()
+            window.quit()
         else:
             wait.destroy()
             check_connection()
@@ -125,7 +135,7 @@ def check_error():
         error_list.append('URL Error! Please include https:// in the URL.')
 
     if len(error_list) == 0:
-        message = 'Here are the values that you entered:\n\n'+'\n'.join([f'Code: {code_value}', f'Batch: {batch_value}', f'Branch: {branch_value}', f'First USN: {firstnum_value}', f'Last USN: {lastnum_value}', f'Semester: {sem_value}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nIf you wish to proceed, press Yes.\nIf you wish to change any values, press No.'
+        message = 'Here are the values that you entered:\n\n'+'\n'.join([f'Code: {code_value}', f'Batch: {batch_value}', f'Branch: {branch_value}', f'First USN: {firstnum_value}', f'Last USN: {lastnum_value}', f'Semester: {sem_value}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
         answer = messagebox.askyesno(title='Confirmation', message=message)
 
         if answer:
@@ -133,6 +143,7 @@ def check_error():
             verify_button.config(state='disabled')
             reset_button.config(state='normal')
             collect_button.config(state='normal')
+            status_progress.grid_remove()
     
     else:
         message = 'Kindly correct the following error(s) before proceeding:\n\n'+'\n'.join(error_list)
@@ -148,6 +159,7 @@ def reset_entries():
 def try_again():
     toggle_entries('normal')
     verify_button.config(state='normal')
+    abort_button.config(state='disabled')
     progress.config(value=0)
 
 def status_update(statement):
@@ -156,11 +168,18 @@ def status_update(statement):
     statusbox.see(END)
     statusbox.config(state='disabled')
 
+def abort_app():
+    global to_abort
+    to_abort = True
+    status_update('Aborting...\n')
+
+
 def start_app():
+    global to_abort
+    to_abort = False
+    loading_label.grid(column=0, row=11, columnspan=2, pady=10)
     skipped_usns = []
     data_dict = {}
-    window_is_present = True
-    to_quit = False
 
     code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
 
@@ -169,10 +188,12 @@ def start_app():
         driver.get(url_value)
     except:
         messagebox.showerror(title='Connection Error', message='There was an unknown error.\n\nPlease try again after some time.')
-        window_is_present = False
-        to_quit = True
+        loading_label.grid_remove()
         try_again()
+        return
     else:
+        loading_label.grid_remove()
+        status_progress.grid(column=0, row=11)
         progress.grid(column=0, row=0, columnspan=2)
         statusbox.grid(column=0, row=1, columnspan=2, pady=20)
         statusbox.config(state='normal')
@@ -181,103 +202,97 @@ def start_app():
 
     k = int(firstnum_value) - 1
 
-    while k < int(lastnum_value) and window_is_present and not to_quit:
+    while k < int(lastnum_value) and not to_abort:
         k += 1
         this_retry = 0
-        while this_retry < int(retries_value):
-            try:
-                usn = f'{code_value}{batch_value}{branch_value}{k:03d}'
 
-                driver.find_element(By.NAME, 'lns').send_keys(usn)
+        try:
+            abort_button.config(state='normal')
 
-                captcha_image = driver.find_element(By.XPATH, '//*[@id="raj"]/div[2]/div[2]/img').screenshot_as_png
-                captcha_text = get_captcha_from_image(captcha_image)
+            while this_retry < int(retries_value) and not to_abort:
+                try:
+                    usn = f'{code_value}{batch_value}{branch_value}{k:03d}'
 
-                if len(captcha_text) != 6:
-                    status_update('Length of the read CAPTCHA was invalid. Trying again.\n')
-                    driver.refresh()
-                    continue
+                    driver.find_element(By.NAME, 'lns').send_keys(usn)
+                    this_retry = 0
 
-                driver.find_element(By.NAME, 'captchacode').send_keys(captcha_text)
+                    captcha_image = driver.find_element(By.XPATH, '//*[@id="raj"]/div[2]/div[2]/img').screenshot_as_png
+                    captcha_text = get_captcha_from_image(captcha_image)
 
-                driver.find_element(By.ID, 'submit').click()
-
-                student_name = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
-                student_usn = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
-
-                soup = BeautifulSoup(driver.page_source, 'lxml')
-
-                marks_data = soup.find('div', class_='divTableBody')
-
-                data_dict[f'{student_usn}+{student_name}'] = marks_data
-
-                status_update(f'Data successsfully collected for {usn}\n')
-
-                progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
-
-                time.sleep(2)
-
-                driver.back()
-
-                break
-
-            except UnexpectedAlertPresentException:
-                alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
-                alert_text = alert.text
-
-                status_update(f'Error for {usn} because {alert_text}.')
-
-                if alert_text == 'University Seat Number is not available or Invalid..!':
-                    status_update('Moving to the next USN.\n')
-                    k += 1
-                    skipped_usns.append(usn)
-                    alert.accept()
-                    break
-                else:
-                    status_update('Trying again.\n')
-                    alert.accept()
-
-            except NoSuchWindowException:
-                messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
-                window_is_present = False
-                to_quit = True
-                try_again()
-                break
-
-            except:
-                soup2 = BeautifulSoup(driver.page_source, 'lxml')
-                occur = soup2.find_all('b', string='University Seat Number')
-                if len(occur) > 0:
-                    status_update(f'There was an error collecting data for {usn}. Trying again.\n')
-                    driver.back()
-                else:
-                    status_update(f'Error! Retrying after {delay_value} seconds. Retry {this_retry+1} of {retries_value}\n')
-                    this_retry += 1
-                    time.sleep(int(delay_value))
-                    try:
+                    if len(captcha_text) != 6:
+                        status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
                         driver.refresh()
-                    except:
-                        messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
-                        window_is_present = False
-                        to_quit = True
-                        try_again()
+                        continue
+
+                    driver.find_element(By.NAME, 'captchacode').send_keys(captcha_text)
+
+                    driver.find_element(By.ID, 'submit').click()
+
+                    student_name = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
+                    student_usn = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
+
+                    soup = BeautifulSoup(driver.page_source, 'lxml')
+
+                    marks_data = soup.find('div', class_='divTableBody')
+
+                    data_dict[f'{student_usn}+{student_name}'] = marks_data
+
+                    status_update(f'Data successsfully collected for {usn}\n')
+
+                    progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
+
+                    time.sleep(2)
+
+                    driver.back()
+
+                    break
+
+                except UnexpectedAlertPresentException:
+                    alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
+                    alert_text = alert.text
+
+                    status_update(f'Error for {usn} because {alert_text}')
+
+                    if alert_text == 'University Seat Number is not available or Invalid..!':
+                        status_update('Moving to the next USN.\n')
+                        skipped_usns.append(usn)
+                        alert.accept()
                         break
+                    else:
+                        status_update('Trying again.\n')
+                        alert.accept()
 
-        else:
-            try:
+                except:
+                    soup2 = BeautifulSoup(driver.page_source, 'lxml')
+                    occur = soup2.find_all('b', string='University Seat Number')
+                    if len(occur) > 0:
+                        status_update(f'There was an error collecting data for {usn}. Trying again.\n')
+                        driver.back()
+                    else:
+                        status_update(f'Error! Retrying after {delay_value} seconds. Retry {this_retry+1} of {retries_value}\n')
+                        this_retry += 1
+                        time.sleep(int(delay_value))
+                        driver.refresh()
+
+            else:
                 messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
-            except NoSuchWindowException:
-                messagebox.showerror(title='Window Closed', message='Window closed prematurely. Data collected so far (if any) will be saved.')
-                window_is_present = False
                 try_again()
-            finally:
-                to_quit = True
-                window.quit()
                 break
-
+                    
+        except:
+            messagebox.showerror(title='Unknown Error', message='There was an unknown error.\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
+            try_again()
+            break
+        
+    else:
+        if to_abort:
+            messagebox.showwarning(title='ABORT', message='You have aborted the data collection process. Data collected so far (if any) will be saved.')
+            status_update('ABORTED')
+            try_again()
+    
     driver.quit()
 
-    if not to_quit:
+    if bool(data_dict):
         if len(skipped_usns) > 0:
             status_update(f'These USNs were skipped {skipped_usns}.\n')
         else:
@@ -392,14 +407,20 @@ def start_app():
         else:
             try_again()
 
+    else:
+        messagebox.showinfo(title='No Data', message='No data was collected.')
+        try_again()
+
 def start_thread():
     for button in buttons.winfo_children():
         button.config(state='disabled')
+
     threading.Thread(target=start_app).start()
+
 
 window = Tk()
 window.title('VTU Marks Scraper App')
-window.config(padx=30, pady=30)
+window.config(padx=40, pady=40)
 
 form = Frame(window)
 form.grid()
@@ -430,7 +451,7 @@ Label(form, font=('Segoe UI',10), text='Semester (Ex: 1 or 2 etc): ').grid(colum
 sem_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
 sem_entry.grid(column=1, row=6)
 
-Label(form, font=('Segoe UI',10), text='Retry time delay: ').grid(column=0, row=7, sticky='e')
+Label(form, font=('Segoe UI',10), text='Retry time delay (seconds): ').grid(column=0, row=7, sticky='e')
 delay_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
 delay_entry.grid(column=1, row=7)
 
@@ -446,16 +467,20 @@ buttons = Frame(window)
 buttons.grid(column=0, row=10)
 
 verify_button = ttk.Button(buttons, text='Verify', command=check_error, width=15)
-verify_button.grid(column=0, row=0, padx=20, pady=20)
+verify_button.grid(column=0, row=0, padx=10, pady=10, columnspan=3)
 
 collect_button = ttk.Button(buttons, text='Collect', command=start_thread, width=15, state='disabled')
-collect_button.grid(column=2, row=0, padx=20, pady=20)
+collect_button.grid(column=1, row=1, padx=10, pady=10)
 
 reset_button = ttk.Button(buttons, text='Reset', command=reset_entries, width=15, state='disabled')
-reset_button.grid(column=1, row=0, padx=20, pady=20)
+reset_button.grid(column=0, row=1, padx=10, pady=10)
+
+abort_button = ttk.Button(buttons, text='Abort', width=15, command=abort_app, state='disabled')
+abort_button.grid(column=2, row=1, padx=10, pady=10)
+
+loading_label = Label(window, font=('Segoe UI',11), text='Loading...')
 
 status_progress = Frame(window)
-status_progress.grid(column=0, row=11)
 
 progress = ttk.Progressbar(status_progress, orient='horizontal', length=500, mode='determinate')
 
@@ -466,8 +491,6 @@ my_credit.grid(column=0, row=12, columnspan=2)
 
 Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
 
-check_connection()
-
-set_default_values()
+check_connection_thread()
 
 window.mainloop()
