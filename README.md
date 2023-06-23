@@ -8,7 +8,7 @@ The contents of this repository include an automated tool designed to retrieve a
 - Supports automation using Selenium WebDriver
 - Handles the USN entry and CAPTCHA verification automatically
 - Processes the collected data to generate an Excel file
-- Provides an easy-to-use graphical-user interface (GUI)
+- Provides an easy-to-use graphical-user interface (GUI) through Tkinter
 - Handles common errors. If the number of retries crosses the set limit, the data collected till that point will be saved.
 
 ## Prerequisites
@@ -59,7 +59,7 @@ python "vtu marks scraper app by nithinhm - GUI.py"
 
 ## Executable
 
-Alternatively, you can download and use [this pre-compiled executable file](https://drive.google.com/file/d/1Cc-0kfdneE3ezYS-UWVfCQm2AGdMZnoj/view?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use a pre-compiled executable file present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
 Run the executable by double-clicking it.
 
