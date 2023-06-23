@@ -170,8 +170,9 @@ def status_update(statement):
 
 def abort_app():
     global to_abort
-    to_abort = True
-    status_update('Aborting...\n')
+    to_abort = messagebox.askyesno(title='ABORT', message='Are you sure you want to abort the data collection process?\n\nData collected so far (if any) will be saved.')
+    if to_abort:
+        status_update('Aborting...\n')
 
 
 def start_app():
@@ -276,21 +277,18 @@ def start_app():
 
             else:
                 if to_abort:
-                    messagebox.showwarning(title='ABORT', message='You have aborted the data collection process. Data collected so far (if any) will be saved.')
                     status_update('ABORTED\n')
-                    try_again()
                     break
                 else:
                     messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
-                    try_again()
                     break
                     
         except:
             messagebox.showerror(title='Unknown Error', message='There was an unknown error.\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
-            try_again()
             break
     
     driver.quit()
+    try_again()
 
     if bool(data_dict):
         if len(skipped_usns) > 0:
@@ -405,10 +403,12 @@ def start_app():
         if not continue_app:
             window.quit()
         else:
+            status_update('Start Again.\n')
             try_again()
 
     else:
         messagebox.showinfo(title='No Data', message='No data was collected.')
+        status_update('Start Again.\n')
         try_again()
 
 def start_thread():
