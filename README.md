@@ -2,13 +2,15 @@
 
 The contents of this repository include an automated tool designed to retrieve and organize student marks data from the VTU (Visvesvaraya Technological University) website in an excel file and also generate result analysis for the specified branch, as well as a graphical representation of subject performance in the form of an image file. The repository provides both the source code and a pre-compiled executable (GUI) for ease of use.
 
+Additionally there is now another tool that collects data of revaluation marks (source code and app included).
+
 ## Features
 
-- Collects marks data for all students of a branch from the VTU website
-- Supports automation using Selenium WebDriver
-- Handles the USN entry and CAPTCHA verification automatically
-- Processes the collected data to generate an Excel file
-- Provides an easy-to-use graphical-user interface (GUI) through Tkinter
+- Collects marks data for all students of a branch from the VTU website.
+- Supports automation using Selenium WebDriver.
+- Handles the USN entry and CAPTCHA verification automatically.
+- Processes the collected data to generate an Excel file.
+- Provides an easy-to-use graphical-user interface (GUI) through Tkinter.
 - Handles common errors. If the number of retries crosses the set limit, the data collected till that point will be saved.
 
 ## Prerequisites
@@ -43,7 +45,7 @@ cd 2023-VTU-marks-scraper-app
 pip install -r requirements.txt
 ```
 
-4. Run the application using Python:
+4. Run the application using Python (and similarly for the other app):
 
 ```
 python "vtu marks scraper app by nithinhm - GUI.py"
@@ -51,21 +53,21 @@ python "vtu marks scraper app by nithinhm - GUI.py"
 
 5. Enter the required information, such as the college code, branch code, batch year etc.
 
-6. Click Verify to verify the input. If the entered data is valid, you can click Collect. Next, sit back and relax while the tool collects the marks data for the specified students and generates an Excel file.
+6. Click Verify to verify the input. If the entered data is valid, you can click Collect. Next, sit back and relax while the tool collects the marks data for the specified students and processes it.
 
-7. Once the process is complete, you will find the processed marks data in an Excel file named `20{batch} {branch} semester {number} {first_USN} to {last_USN} VTU results.xlsx` within the appropriate subfolder in the same directory.
+7. Once the process is complete, you will find the processed marks data in an Excel file within the appropriate subfolder in the same directory.
 
 8. If you wish, you can continue collecting data for other branches or simply quit.
 
 ## Executable
 
-Alternatively, you can download and use a pre-compiled executable file present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use the pre-compiled executable files (both kinds) present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executables are compiled using PyInstaller and do not require Python installation. But you still need to install Pytesseract in the default directory.
 
-Run the executable by double-clicking it.
+Run the executable(s) by double-clicking it.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU General Public License v2.0](LICENSE).
 
 ## Contribution
 

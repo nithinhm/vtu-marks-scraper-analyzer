@@ -15,13 +15,9 @@ import pytesseract
 import pandas as pd
 from bs4 import BeautifulSoup
 import time
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import os
 import threading
 
-matplotlib.use('agg')
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 pixel_range = [(i, i, i) for i in range(102, 130)]
@@ -46,17 +42,19 @@ def get_captcha_from_image(target_image):
     return pytesseract.image_to_string(white_image).strip()
 
 art = r'''
- _    __________  __   __  ___           __           _____                                    ___               
-| |  / /_  __/ / / /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____  
-| | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \ 
-| |/ / / / / /_/ /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ / 
-|___/ /_/  \____/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/  
-                                                                       /_/                       /_/   /_/       
+
+ _    __________  __   ____                  __   __  ___           __           _____                                    ___              
+| |  / /_  __/ / / /  / __ \___ _   ______ _/ /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____ 
+| | / / / / / / / /  / /_/ / _ \ | / / __ `/ /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \
+| |/ / / / / /_/ /  / _, _/  __/ |/ / /_/ / /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ /
+|___/ /_/  \____/  /_/ |_|\___/|___/\__,_/_/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/ 
+                                                                                                  /_/                       /_/   /_/      
+
 '''
 
 service = ChromeService(executable_path='/chromedriver.exe')
 
-default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
+default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFRVEcbcs23/index.php']
 to_abort = False
 
 def check_connection_thread():
@@ -253,7 +251,7 @@ def start_app():
 
                     status_update(f'Error for {usn} because {alert_text}')
 
-                    if alert_text == 'University Seat Number is not available or Invalid..!':
+                    if alert_text in ['You have not applied for reval or reval results are awaited !!!', 'University Seat Number is not available or Invalid..!']:
                         status_update('Moving to the next USN.\n')
                         progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
                         skipped_usns.append(usn)
@@ -311,11 +309,11 @@ def start_app():
             df_temp = pd.DataFrame(data[1:], columns=data[0])
 
             subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
-            headers = df_temp.columns[2:-1]
+            headers = df_temp.columns[2:]
 
             ready_columns = [(name, header) for name in subjects for header in headers]
 
-            student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')] + ready_columns).T
+            student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:].to_numpy().flatten()), index= [('USN',''), ('Student Name','')] + ready_columns).T
             student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
 
             list_of_student_dfs.append(student_df)
@@ -329,77 +327,16 @@ def start_app():
         final_df.index += 1
 
         df2 = final_df.apply(pd.to_numeric, errors='ignore')
-
-        collected_usns = list(df2['USN'])
-
-        first_USN, last_USN = collected_usns[0], collected_usns[-1]
-
-        overall_column = df2[df2.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
-        temp_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
-
-        result_cases = ['A', 'P', 'F', 'W', 'X']
-        not_present1 = list(set(result_cases) - set(list(temp_df.columns)))
-
-        if len(not_present1) > 0:
-            for i in not_present1:
-                temp_df[i] = 0
-
-        students_passed_all = sum(temp_df['F'] == 0)
-        students_failed = sum(temp_df['F'] > 0)
-        students_failed_one = sum(temp_df['F'] == 1)
-        students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
-        overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
-
-        stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall pass percentage':overall_pass_percentage}, name='')
-
-        result_df = df2.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
-        result_df.columns = [x[0] for x in result_df.columns]
-        result_df = result_df.T
-        not_present2 = list(set(result_cases) - set(list(result_df.columns)))
-
-        if len(not_present2) > 0:
-            for i in not_present2:
-                result_df[i] = 0
         
-        result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
-
-        pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
-        result_df['Subject Pass Percentage'] = pass_percentage_column
-
-        labels = [x.split('(')[-1][:-1] for x in result_df.index]
-
-        x = np.arange(len(labels))
-
-        fig, ax = plt.subplots(figsize=(15,7))
-        ax.bar(x, pass_percentage_column)
-
-        ax.set_xlabel('Subject Code', fontsize='x-large')
-        ax.set_ylabel('Pass Percentage', fontsize='x-large')
-        ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
-        ax.set_xticks(x, labels, fontsize='x-large')
-        ax.set_yticks(ax.get_yticks(), fontsize='large')
-
-        for i,v in enumerate(result_df.index):
-            ax.text(i, pass_percentage_column[i]+2, result_df.loc[v, 'Subject Pass Percentage'], ha='center', fontsize='x-large')
-
-        fig.tight_layout()
-
-        folder_path = f'20{batch_value} {branch_value} semester {sem_value} VTU results'
+        folder_path = f'Reval - 20{batch_value} {branch_value} semester {sem_value} VTU results'
         os.makedirs(folder_path, exist_ok=True)
-        file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {branch_value} branch students.jpg')
 
-        fig.savefig(file_path_image)
-
-        df2['Overall_Total'] = overall_column
-
-        file_path_excel = os.path.join(folder_path, f'20{batch_value} {branch_value} semester {sem_value} {first_USN} to {last_USN} VTU results.xlsx')
+        file_path_excel = os.path.join(folder_path, f'Reval - 20{batch_value} {branch_value} semester {sem_value} VTU results.xlsx')
 
         with pd.ExcelWriter(file_path_excel) as writer:
             df2.to_excel(writer, sheet_name='Student-wise results')
-            stats_df.to_excel(writer, sheet_name='Stats of students')
-            result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
 
-        continue_app = messagebox.askyesno(title='Continue?', message=f'Data collected for USNs {first_USN} to {last_USN} and saved in an excel file.\nResult analysis also saved.\n\nPress YES to continue to collect data of other students.\n\nPress No to quit the app.')
+        continue_app = messagebox.askyesno(title='Continue?', message=f'Data collected and saved in an excel file.\n\nPress YES to continue to collect data of other students.\n\nPress No to quit the app.')
         if not continue_app:
             window.quit()
         else:
@@ -425,7 +362,7 @@ def start_thread():
 
 
 window = Tk()
-window.title('VTU Marks Scraper App')
+window.title('VTU Reval Marks Scraper App')
 window.config(padx=40, pady=40)
 
 form = Frame(window)
@@ -434,39 +371,39 @@ form.grid()
 Label(form, text=art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
 
 Label(form, font=('Segoe UI',10), text='Region+College code (Ex: 1AM or 2KE etc): ').grid(column=0, row=1, sticky='w')
-code_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+code_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 code_entry.grid(column=1, row=1)
 
 Label(form, font=('Segoe UI',10), text='Batch (Ex: 22 or 21 etc): ').grid(column=0, row=2, sticky='w')
-batch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+batch_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 batch_entry.grid(column=1, row=2)
 
 Label(form, font=('Segoe UI',10), text='Branch (Ex: CS or MT or CI etc): ').grid(column=0, row=3, sticky='w')
-branch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+branch_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 branch_entry.grid(column=1, row=3)
 
 Label(form, font=('Segoe UI',10), text='First Number in USN (Ex: 1 or 25 etc): ').grid(column=0, row=4, sticky='w')
-firstnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+firstnum_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 firstnum_entry.grid(column=1, row=4)
 
 Label(form, font=('Segoe UI',10), text='Last Number in USN (Ex: 5 or 50 etc): ').grid(column=0, row=5, sticky='w')
-lastnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+lastnum_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 lastnum_entry.grid(column=1, row=5)
 
 Label(form, font=('Segoe UI',10), text='Semester (Ex: 1 or 2 etc): ').grid(column=0, row=6, sticky='w')
-sem_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+sem_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 sem_entry.grid(column=1, row=6)
 
 Label(form, font=('Segoe UI',10), text='Retry time delay (seconds): ').grid(column=0, row=7, sticky='w')
-delay_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+delay_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 delay_entry.grid(column=1, row=7)
 
 Label(form, font=('Segoe UI',10), text='Number of retries: ').grid(column=0, row=8, sticky='w')
-retries_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+retries_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 retries_entry.grid(column=1, row=8)
 
 Label(form, font=('Segoe UI',10), text='Result page URL (starts with https://): ').grid(column=0, row=9, sticky='w')
-url_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
+url_entry = ttk.Entry(form, width=60, font=('Segoe UI',10))
 url_entry.grid(column=1, row=9)
 
 buttons = Frame(window)
@@ -488,9 +425,9 @@ loading_label = Label(window, font=('Segoe UI',11), text='Loading...')
 
 status_progress = Frame(window)
 
-progress = ttk.Progressbar(status_progress, orient='horizontal', length=550, mode='determinate')
+progress = ttk.Progressbar(status_progress, orient='horizontal', length=680, mode='determinate')
 
-statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=10, font=('Segoe UI', 10))
+statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=95, height=10, font=('Segoe UI', 10))
 
 my_credit = Frame(window)
 my_credit.grid(column=0, row=12, columnspan=2)
