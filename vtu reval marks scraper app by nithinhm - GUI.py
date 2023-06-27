@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 import time
 import os
 import threading
+import webbrowser
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
@@ -433,6 +434,14 @@ my_credit = Frame(window)
 my_credit.grid(column=0, row=12, columnspan=2)
 
 Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
+
+gitlink = Label(my_credit, text="My GitHub", fg="blue", cursor="hand2")
+gitlink.pack()
+gitlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/nithinhm"))
+
+dinlink = Label(my_credit, text="My LinkedIn", fg="blue", cursor="hand2")
+dinlink.pack()
+dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
 
 check_connection_thread()
 
