@@ -427,7 +427,8 @@ def start_thread():
 
 window = Tk()
 window.title('VTU Marks Scraper App')
-window.config(padx=40, pady=40)
+window.geometry('650x800')
+window.config(padx=40, pady=10)
 
 form = Frame(window)
 form.grid()
@@ -491,7 +492,7 @@ status_progress = Frame(window)
 
 progress = ttk.Progressbar(status_progress, orient='horizontal', length=550, mode='determinate')
 
-statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=10, font=('Segoe UI', 10))
+statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=8, font=('Segoe UI', 10))
 
 my_credit = Frame(window)
 my_credit.grid(column=0, row=12, columnspan=2)
