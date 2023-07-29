@@ -1,7 +1,4 @@
 # VTU Marks Scraper and Analyzer
-
-**Updated 28/07/2023**
-
 The contents of this repository include 2 apps:
 
 1. **Scraper and Analyzer App**
@@ -84,7 +81,7 @@ python "scraper_analyzer_app_nithinhm.py"
 
 ## Executable
 
-Alternatively, you can download and use the pre-compiled executable file present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use the pre-compiled executable files present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executables are compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
 Run the executable by double-clicking it.
 
