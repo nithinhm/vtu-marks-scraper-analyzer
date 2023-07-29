@@ -1,23 +1,22 @@
 # VTU Marks Scraper and Analyzer
 
-**Updated 20/07/2023**
+**Updated 28/07/2023**
 
-The contents of this repository include 3 apps: 
+The contents of this repository include 2 apps:
 
-1. **Scraper App**: An automated tool designed to retrieve student marks data from the VTU (Visvesvaraya Technological University) website and store it in a CSV file. This app is intended for data scraping and gathering marks information.
+1. **Scraper and Analyzer App**
 
-2. **Analyer App**: A tool that generates result analysis based on the data collected by the Scraping App and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This app is focused on analyzing the collected marks data and presenting insights.
+    This main app contains the following two options:
+
+    - **Marks Scraper**: An automated tool designed to retrieve student marks data from the VTU (Visvesvaraya Technological University) website and store it in a CSV file. This option is intended for data scraping and gathering marks information.
+
+    - **Marks Analyer**: A tool that generates result analysis based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This option is focused on analyzing the collected marks data and presenting insights.
+
+2. **Revaluation Marks Scraper App**
+
+    An automated tool that collects data of revaluation marks similar to the above scraper.
 
 The repository provides both the source code and pre-compiled executables (GUI) of both apps for ease of use.
-
-Additionally, there is another tool included in this repository:
-
-3. **Revaluation Marks Scraper App**: A tool that collects data of revaluation marks. This app allows users to gather revaluation marks information, and it comes with both the source code and an executable version for easy utilization.
- 
-### Note
-Previously, this project featured a single app that performed both scraping and analyzing. However, I have now split the code into two separate apps to address possible partial data collection during scraping caused by network or time-related issues. By doing so, we can now generate the analysis report by joining all the partial data together using the analyzer app.
-
-But if you are confident that you can collect all the data in one uninterrupted session, you are welcome to use the [old app](https://drive.google.com/file/d/1xoxC6K3Vw9zZ4WcFkez8IaNYAfqk0o2r/view?usp=drive_link). The app provides a streamlined experience for users who wish to collect and analyze data in one go.
 
 ## Features
 
@@ -60,35 +59,34 @@ cd vtu-marks-scraper-analyzer
 pip install -r requirements.txt
 ```
 
-4. Run the scraper app using Python:
+4. Run the main app using Python:
 
 ```
-python "scraper_app_nithinhm.py"
+python "scraper_analyzer_app_nithinhm.py"
 ```
+5. Click on the `Marks Scraper` button. The scraper app will open.
 
-5. Enter the required information, such as the college code, branch code, batch year etc.
+6. Enter the required information, such as the college code, branch code, batch year etc.
 
-6. Click "Verify" to verify the input. If the entered data is valid, you can click "Collect".
+7. Click "Verify" to verify the input. If the entered data is valid, you can click "Collect".
 
-7. Next, sit back and relax while the tool collects the marks data for the specified students. (You could also abort the collection process by clicking "Abort." Data collected so far, if any, will be saved.)
+8. Next, sit back and relax while the tool collects the marks data for the specified students. (You could also abort the collection process by clicking "Abort." Data collected till that point, if any, will be saved.)
 
-8. Once the process is complete, you will find the collected marks data in a CSV file within the appropriate subfolder in the same directory.
+9. Once the process is complete, you will find the collected marks data in a CSV file within the appropriate subfolder in the same directory.
 
-9. If you wish, you can continue collecting data for other branches or simply quit. (You could also collect data in chunks for the same branch and use the analyzer app to combine all the chunks to generate the final analysis report.)
+10. If you wish, you can continue collecting data for other branches or simply quit. (You could also collect data in chunks for the same branch and use the analyzer app to combine all the chunks to generate the final analysis report.)
 
-10. After you have collected the data for all the students from a branch, run the analyzer app using Python to analyze the collected data:
-```
-python "analyzer_app_nithinhm.py"
-``` 
-11. Click on "Browse" and select the saved CSV file(s) that contain the marks data.
+11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
-12. Click on "Analyze" and do as instructed. You will get the analysis report for the branch in the selected folder.
+12. Click on "Browse" and select the saved CSV file(s) that contain the marks data.
+
+13. Click on "Analyze" and do as instructed. You will get the analysis report for the branch in the selected folder.
 
 ## Executable
 
-Alternatively, you can download and use the pre-compiled executable files (both scraper and analyzer) present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executables are compiled using PyInstaller and do not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use the pre-compiled executable file present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
-Run the executable(s) by double-clicking it.
+Run the executable by double-clicking it.
 
 ## License
 
