@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service as ChromeService
+#from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import *
 from PIL import Image
 from io import BytesIO
@@ -53,7 +53,7 @@ art = r'''
 
 '''
 
-service = ChromeService(executable_path='/chromedriver.exe')
+#service = ChromeService(executable_path='/chromedriver.exe')
 
 default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFRVEcbcs23/index.php']
 to_abort = False
@@ -74,7 +74,7 @@ def check_connection():
     try:
         options = Options()
         options.add_argument("--headless=new")
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(options=options)
         driver.get('https://www.feynmanlectures.caltech.edu/III_toc.html')
         wait.destroy()
         driver.quit()
@@ -183,7 +183,7 @@ def start_app():
     code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
 
     try:
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(options=options)
         driver.get(url_value)
     except:
         messagebox.showerror(title='Connection Error', message='There was an unknown error.\n\nPlease try again after some time.')
