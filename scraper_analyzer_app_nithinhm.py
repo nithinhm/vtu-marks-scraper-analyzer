@@ -1,690 +1,464 @@
-from tkinter import *
+from tkinter import ttk, scrolledtext, messagebox, Toplevel
 from tkinter import filedialog as fd
-from tkinter import messagebox
-from tkinter import ttk
-from tkinter import scrolledtext
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support import expected_conditions as EC
-#from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.common.exceptions import *
-from PIL import Image
-from io import BytesIO
-import pytesseract
-import pandas as pd
-from bs4 import BeautifulSoup
-import time
+import re
 import threading
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import os
-import webbrowser
+from gui import TemplateWindow
+from connection import Connection
+from data_processor import DataProcessor
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-pixel_range = [(i, i, i) for i in range(102, 130)]
-
-matplotlib.use('agg')
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-full_data = None
-filepaths = []
+conn_support = Connection()
 
-#service = ChromeService(executable_path='chromedriver.exe')
+class MainFrame(TemplateWindow):
+    def create_frame(self):
+        self.title("Welcome | Select app")
+        self.config(pady=20)
 
-default_values = ['1AM', '22', 'CS', '1', '100', '1', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
-to_abort = False
+        self.frame = ttk.Frame(self)
+        self.frame.pack()
 
-scraper_art = r'''
- _    __________  __   __  ___           __           _____                                    ___               
-| |  / /_  __/ / / /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____  
-| | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \ 
-| |/ / / / / /_/ /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ / 
-|___/ /_/  \____/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/  
-                                                                       /_/                       /_/   /_/       
-'''
+        self.frame.welcome_label = ttk.Label(self.frame, font=('Segoe UI', 10), text='Welcome to the VTU Marks Scraper and Analyzer App')
+        self.frame.welcome_label.grid(columnspan=2)
 
-analyzer_art = r'''
- __   _______ _   _   __  __          _           _             _                     _             
- \ \ / /_   _| | | | |  \/  |__ _ _ _| |__ ___   /_\  _ _  __ _| |_  _ ______ _ _    /_\  _ __ _ __ 
-  \ V /  | | | |_| | | |\/| / _` | '_| / /(_-<  / _ \| ' \/ _` | | || |_ / -_) '_|  / _ \| '_ \ '_ \
-   \_/   |_|  \___/  |_|  |_\__,_|_| |_\_\/__/ /_/ \_\_||_\__,_|_|\_, /__\___|_|   /_/ \_\ .__/ .__/
-                                                                  |__/                   |_|  |_|   
-'''
+        self.frame.select_app_label = ttk.Label(self.frame, font=('Segoe UI', 10), text='Select the app to proceed:')
+        self.frame.select_app_label.grid(row=1, columnspan=2, sticky='w', padx=20, pady=20)
 
-def get_captcha_from_image(target_image):
-    image_data = BytesIO(target_image)
+        self.frame.main_buttons = ttk.Frame(self.frame)
+        self.frame.main_buttons.grid(padx=20)
 
-    image = Image.open(image_data)
-    width, height = image.size
+        self.frame.s_button = ttk.Button(self.frame.main_buttons, text='\n\n\nMarks Scraper\n\n\n', command=self.open_scraper, width=30)
+        self.frame.s_button.grid(row=2, column=0)
 
-    image = image.convert("RGB")
+        self.frame.a_button = ttk.Button(self.frame.main_buttons, text='\n\n\nMarks Analyzer\n\n\n', command=self.open_analyzer, width=30)
+        self.frame.a_button.grid(row=2, column=1)
 
-    white_image = Image.new("RGB", (width, height), "white")
 
-    for x in range(width):
-        for y in range(height):
-            pixel = image.getpixel((x, y))
+    def open_scraper(self):
+        self.withdraw()
+        self.scraper_window = ScraperFrame()
+        self.scraper_window.grab_set()
+        self.scraper_window.protocol("WM_DELETE_WINDOW", self.close_scraper)
+        self.scraper_window.mainloop()
 
-            if pixel in pixel_range:
-                white_image.putpixel((x, y), pixel)
+    def close_scraper(self):
+        self.scraper_window.destroy()
+        self.deiconify()
 
-    return pytesseract.image_to_string(white_image).strip()
 
-def run_scraper():
-    def check_connection_thread():
-        toggle_entries('disabled')
-        for button in scraper_buttons.winfo_children():
-            button.config(state='disabled')
+    def open_analyzer(self):
+        self.withdraw()
+        self.analyzer_window = AnalyzerFrame()
+        self.analyzer_window.grab_set()
+        self.analyzer_window.protocol("WM_DELETE_WINDOW", self.close_analyzer)
+        self.analyzer_window.mainloop()
 
-        threading.Thread(target=check_connection).start()
+    def close_analyzer(self):
+        self.analyzer_window.destroy()
+        self.deiconify()        
 
-    def check_connection():
-        scraper_window.withdraw()
-        wait = Toplevel()
-        wait.title('Just a moment')
-        wait_label = Label(wait, text='Checking your internet connection...', width=30)
-        wait_label.pack(padx=20, pady=5)
+
+class ScraperFrame(TemplateWindow):
+    scraper_art = r'''
+     _    __________  __   __  ___           __           _____                                    ___               
+    | |  / /_  __/ / / /  /  |/  /___ ______/ /_______   / ___/______________ _____  ___  _____   /   |  ____  ____  
+    | | / / / / / / / /  / /|_/ / __ `/ ___/ //_/ ___/   \__ \/ ___/ ___/ __ `/ __ \/ _ \/ ___/  / /| | / __ \/ __ \ 
+    | |/ / / / / /_/ /  / /  / / /_/ / /  / ,< (__  )   ___/ / /__/ /  / /_/ / /_/ /  __/ /     / ___ |/ /_/ / /_/ / 
+    |___/ /_/  \____/  /_/  /_/\__,_/_/  /_/|_/____/   /____/\___/_/   \__,_/ .___/\___/_/     /_/  |_/ .___/ .___/  
+                                                                           /_/                       /_/   /_/       
+    '''
+
+    default_entry_values = ['1AM22CS001', '1AM22CS100', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
+
+    to_abort = None
+
+    def create_frame(self):
+        self.title('VTU Marks Scraper App')
+        self.config(padx=40, pady=10)
+
+        self.frame = ttk.Frame(self)
+        self.frame.pack()
+
+        self.frame.form = ttk.Frame(self.frame)
+        self.frame.form.grid()
+
+        ttk.Label(self.frame.form, text=self.scraper_art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
+
+        texts = ['First USN', 'Last USN', 'Retry time delay (seconds): ', 'Number of retries: ', 'Result page URL (starts with https://): ']
+
+        for i, text in enumerate(texts):
+            ttk.Label(self.frame.form, font=('Segoe UI',10), text=text).grid(column=0, row=i+1, sticky='w')
+        
+        for i in range(len(texts)):
+            ttk.Entry(self.frame.form, width=40, font=('Segoe UI',10)).grid(column=1, row=1+i)
+        
+        self.frame.form.entries = [e for e in self.frame.form.winfo_children() if isinstance(e, ttk.Entry)]
+
+        self.frame.buttons = ttk.Frame(self.frame)
+        self.frame.buttons.grid(pady=10)
+
+        self.frame.buttons.verify = ttk.Button(self.frame.buttons, text='Verify', command=self.verify_for_error, width=15)
+        self.frame.buttons.verify.grid(column=0, row=0, padx=10, pady=10, columnspan=3)
+
+        self.frame.buttons.reset = ttk.Button(self.frame.buttons, text='Reset', command=self.reset_default_entry_values, width=15, state='disabled')
+        self.frame.buttons.reset.grid(column=0, row=1, padx=10, pady=10)
+
+        self.frame.buttons.collect = ttk.Button(self.frame.buttons, text='Collect', command=self.on_collect_click, width=15, state='disabled')
+        self.frame.buttons.collect.grid(column=1, row=1, padx=10, pady=10)
+
+        self.frame.buttons.abort = ttk.Button(self.frame.buttons, text='Abort', command=self.abort_app, width=15, state='disabled')
+        self.frame.buttons.abort.grid(column=2, row=1, padx=10, pady=10)
+
+        self.frame.buttons.buttons = {name:b for name, b in zip(['v', 'r', 'c', 'a'], self.frame.buttons.winfo_children())}
+
+        self.frame.loading = ttk.Frame(self.frame)
+
+        self.frame.loading.label = ttk.Label(self.frame.loading, font=('Segoe UI',11), text='Loading...')
+        self.frame.loading.label.grid(columnspan=2)
+
+        self.frame.status = ttk.Frame(self.frame)
+
+        self.frame.status.progress = ttk.Progressbar(self.frame.status, orient='horizontal', length=550, mode='determinate')
+        self.frame.status.progress.grid(columnspan=2)
+
+        self.frame.status.textbox = scrolledtext.ScrolledText(self.frame.status, state='disabled', wrap='word', width=80, height=8, font=('Segoe UI', 10))
+        self.frame.status.textbox.grid(columnspan=2, pady=20)
+
+        self.toggle_entries('disabled')
+        self.toggle_buttons(v=0, r=0, c=0, a=0)
+
+        threading.Thread(target=self.start_check_connection).start()
+
+
+    def toggle_entries(self, state):
+        for e in self.frame.form.entries:
+            e.config(state=state)
+    
+    def toggle_buttons(self, **kwargs):
+        '''
+        **kwargs will look like v=1, r=0, c=1, a=1
+
+        where 0 means to disable and 1 means to enable
+
+        and the letters represent the different buttons
+
+        v - verify, r - reset, c - collect, a - abort
+        '''
+        for name, i in kwargs.items():
+            if i==1:
+                self.frame.buttons.buttons[name].config(state='normal')
+            elif i==0:
+                self.frame.buttons.buttons[name].config(state='disabled')
+    
+    def reset_default_entry_values(self):
+        self.toggle_entries('normal')
+        for i, e in enumerate(self.frame.form.entries):
+            e.delete(0, 'end')
+            e.insert(0, self.default_entry_values[i])
+        self.toggle_buttons(v=1, r=0, c=0)
+
+    def open_top_wait(self):
+        self.top_wait = Toplevel()
+        self.top_wait.title('Just a moment')
+        ttk.Label(self.top_wait, text='Checking your internet connection...').pack(padx=20, pady=5)
+        self.top_wait.lift()
+        x = self.winfo_x() + self.winfo_width()//2 - self.top_wait.winfo_width()//2
+        y = self.winfo_y() + self.winfo_height()//2 - self.top_wait.winfo_height()//2
+        self.top_wait.geometry(f"+{x}+{y}")
+        self.top_wait.protocol("WM_DELETE_WINDOW", self.disable_event)
+
+    def disable_event(self):
+        pass
+
+    def start_check_connection(self):
+        self.open_top_wait()
 
         try:
-            options = Options()
-            options.add_argument("--headless=new")
-            options.add_experimental_option('excludeSwitches', ['enable-logging'])
-            driver = webdriver.Chrome(options=options)
-            driver.get('https://www.feynmanlectures.caltech.edu/III_toc.html')
-            wait.destroy()
-            driver.quit()
-            messagebox.showinfo(title='Internet Status', message='Internet is connected.\n\nPresss OK to continue.')
-            scraper_window.deiconify()
-            reset_entries()
+            conn_support.check_internet()
 
         except:
-            check_again = messagebox.askretrycancel(title='Internet Status', message='Internet is not connected.\n\nWould you like to retry?\n\nPresss "Cancel" to quit the app.')
-            wait.destroy()
-            if not check_again:
-                driver.quit()
-                scraper_close()
-            else:
-                driver.quit()
-                check_connection()
+            conn_support.driver.quit()
+            self.top_wait.destroy()
+            if messagebox.askretrycancel(title='Internet Status', message='Internet is not connected.\n\nWould you like to retry?\n\nPresss "Cancel" to quit the app.'):
+                self.start_check_connection()
 
-    def get_entry_widgets():
-        return [e for e in form.winfo_children() if isinstance(e, ttk.Entry)]
+        else:
+            conn_support.driver.quit()
+            self.top_wait.destroy()
+            messagebox.showinfo(title='Internet Status', message='Internet is connected.\n\nPresss OK to continue.')
+            self.reset_default_entry_values()
 
-    def set_default_values():
-        for i, entry_widget in enumerate(get_entry_widgets()):
-            entry_widget.delete(0, 'end')
-            entry_widget.insert(0, default_values[i])
-
-    def get_values():
-        entry_widgets = get_entry_widgets()
-        values = [e.get().upper().strip() for e in entry_widgets[:-1]] + [entry_widgets[-1].get().strip()]
-        return tuple(values)
-
-    def toggle_entries(state):
-        for entry_widget in get_entry_widgets():
-            entry_widget.config(state=state)
-
-    def check_error():
+    def verify_for_error(self):
         error_list = []
 
-        code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
+        pattern_usn = r'^\d{1}[A-Za-z]{2}\d{2}[A-Za-z]{2}\d{3}$'
 
-        if len(code_value) != 3 or (not isinstance(int(code_value[0]), int)) or (not isinstance(code_value[1:], str)):
-            error_list.append('Code Error! Enter a valid 3-character college code.')
-        if len(batch_value) != 2 or (not isinstance(int(batch_value), int)):
-            error_list.append('Batch Error! Enter a valid 2-digit batch number.')
-        if len(branch_value) != 2:
-            error_list.append('Branch Error! Enter a valid 2-character branch.')
-        if int(firstnum_value) < 1 or int(firstnum_value) > 999:
-            error_list.append('First USN Error! Enter a valid 3-digit first USN number.')
-        if int(lastnum_value) < 1 or int(lastnum_value) > 999:
-            error_list.append('Last USN Error! Enter a valid 3-digit last USN number.')
-        if int(sem_value) < 1 or int(sem_value) > 8:
-            error_list.append('Semester Error! Enter a valid semester number.')
-        if not isinstance(int(delay_value), int):
+        first_usn, last_usn, delay_value, retries_value, url_value = tuple([e.get().strip() for e in self.frame.form.entries])
+
+        if not (re.match(pattern_usn, first_usn) and re.match(pattern_usn, last_usn)):
+            error_list.append('USN Error! Enter valid USN(s)')
+        elif first_usn[:-3] != last_usn[:-3]:
+            error_list.append('USN Error! First and last USNs need to match (except for last three characters)')
+        elif int(first_usn[-3:]) > int(last_usn[-3:]):
+            error_list.append('USN Error! First USN has to be less than last USN')
+        
+        if not delay_value.isnumeric():
             error_list.append('Delay Error! Enter a valid number for the delay.')
-        if not isinstance(int(retries_value), int):
+        if not retries_value.isnumeric():
             error_list.append('Retries Error! Enter a valid number for the number of retries.')
         if 'https://' not in url_value:
             error_list.append('URL Error! Please include https:// in the URL.')
 
-        if len(error_list) == 0:
-            message = 'Here are the values that you entered:\n\n'+'\n'.join([f'Code: {code_value}', f'Batch: {batch_value}', f'Branch: {branch_value}', f'First USN: {firstnum_value}', f'Last USN: {lastnum_value}', f'Semester: {sem_value}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
+        if not error_list:
+            message = 'Here are the values that you entered:\n\n'+'\n'.join([f'First USN: {first_usn}', f'Last USN: {last_usn}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
             answer = messagebox.askyesno(title='Confirmation', message=message)
 
             if answer:
-                toggle_entries('disabled')
-                verify_button.config(state='disabled')
-                reset_button.config(state='normal')
-                collect_button.config(state='normal')
-                status_progress.grid_remove()
+                self.usn_begin = first_usn[:-3]
+                self.first_num = int(first_usn[-3:])
+                self.last_num = int(last_usn[-3:])
+                self.delay_value = int(delay_value)
+                self.retries_value = int(retries_value)
+                self.url_value = url_value
+                self.toggle_entries('disabled')
+                self.toggle_buttons(v=0, r=1, c=1)
+                self.frame.status.grid_remove()
         
         else:
             message = 'Kindly correct the following error(s) before proceeding:\n\n'+'\n'.join(error_list)
             answer = messagebox.showerror(title='ERROR', message=message)
+    
+    def try_again(self):
+        self.toggle_entries('normal')
+        self.toggle_buttons(v=1, a=0)
+        self.frame.status.progress.config(value=0)
+        
+    def status_update(self, statement):
+        self.frame.status.textbox.config(state='normal')
+        self.frame.status.textbox.insert('end', statement+'\n')
+        self.frame.status.textbox.see('end')
+        self.frame.status.textbox.config(state='disabled')
 
-    def reset_entries():
-        toggle_entries('normal')
-        set_default_values()
-        verify_button.config(state='normal')
-        reset_button.config(state='disabled')
-        collect_button.config(state='disabled')
-
-    def try_again():
-        toggle_entries('normal')
-        verify_button.config(state='normal')
-        abort_button.config(state='disabled')
-        progress.config(value=0)
-
-    def status_update(statement):
-        statusbox.config(state='normal')
-        statusbox.insert(END, statement+'\n')
-        statusbox.see(END)
-        statusbox.config(state='disabled')
-
-    def abort_app():
-        global to_abort
+    def abort_app(self):
         to_abort = messagebox.askyesno(title='ABORT', message='Are you sure you want to abort the data collection process?\n\nData collected so far (if any) will be saved.')
         if to_abort:
-            status_update('Aborting...\n')
+            self.to_abort = to_abort
+            self.status_update('Aborting...\n')
+        
+    def on_collect_click(self):
+        self.see_process = messagebox.askyesno(title='Look at Process', message='Do you wish to look at the automated data collection process?')
 
-    def scraper_close():
-        scraper_window.destroy()
-        main_window.deiconify()
+        self.toggle_buttons(v=0, r=0, c=0, a=0)
 
-    def start_app():
-        global to_abort, options
-        to_abort = False
-        loading_label.grid(column=0, row=11, columnspan=2, pady=10)
-        skipped_usns = []
-        data_dict = {}
+        threading.Thread(target=self.start_scraping).start()
 
-        code_value, batch_value, branch_value, firstnum_value, lastnum_value, sem_value, delay_value, retries_value, url_value = get_values()
+    def start_scraping(self):
+        self.frame.loading.grid(pady=10)
+
+        self.skipped_usns = []
+
+        self.data_dict = {}
 
         try:
-            driver = webdriver.Chrome(options=options)
-            driver.get(url_value)
-        except Exception as e:
-            print(e)
+            conn_support.connect(self.url_value, self.see_process)
+        except:
             messagebox.showerror(title='Connection Error', message='There was an unknown error.\n\nPlease try again after some time.')
-            loading_label.grid_remove()
-            try_again()
+            self.frame.loading.grid_remove()
+            self.try_again()
             return
         else:
-            loading_label.grid_remove()
-            status_progress.grid(column=0, row=11, pady=5)
-            progress.grid(column=0, row=0, columnspan=2)
-            statusbox.grid(column=0, row=1, columnspan=2, pady=20)
-            statusbox.config(state='normal')
-            statusbox.delete('1.0', END)
-            statusbox.config(state='disabled')
+            self.frame.loading.grid_remove()
+            self.frame.status.grid(pady=5)
+            self.frame.status.textbox.config(state='normal')
+            self.frame.status.textbox.delete('1.0', 'end')
+            self.frame.status.textbox.config(state='disabled')
 
-        k = int(firstnum_value) - 1
+        k = self.first_num - 1
 
-        while k < int(lastnum_value):
+        while k < self.last_num:
             k += 1
             this_retry = 0
 
             try:
-                abort_button.config(state='normal')
+                self.toggle_buttons(a=1)
 
-                while this_retry < int(retries_value) and not to_abort:
+                while this_retry < self.retries_value and not self.to_abort:
                     try:
-                        usn = f'{code_value}{batch_value}{branch_value}{k:03d}'
+                        usn = self.usn_begin+f'{k:03d}'
+                        
+                        conn_support.enter_usn(usn)
 
-                        driver.find_element(By.NAME, 'lns').send_keys(usn)
                         this_retry = 0
 
-                        captcha_image = driver.find_element(By.XPATH, '//*[@id="raj"]/div[2]/div[2]/img').screenshot_as_png
-                        captcha_text = get_captcha_from_image(captcha_image)
+                        captcha_text = conn_support.get_captcha()
 
                         if len(captcha_text) != 6:
-                            status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
-                            driver.refresh()
+                            self.status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
+                            conn_support.driver.refresh()
                             continue
+                        else:
+                            conn_support.captcha_submit(captcha_text)
+                        
+                        self.data_dict = conn_support.get_info(self.data_dict)
 
-                        driver.find_element(By.NAME, 'captchacode').send_keys(captcha_text)
+                        self.status_update(f'Data successsfully collected for {usn}\n')
 
-                        driver.find_element(By.ID, 'submit').click()
+                        self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
 
-                        student_name = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
-                        student_usn = driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
+                        conn_support.sleep(2)
+                        conn_support.driver.back()
 
-                        soup = BeautifulSoup(driver.page_source, 'lxml')
-
-                        marks_data = soup.find('div', class_='divTableBody')
-
-                        data_dict[f'{student_usn}+{student_name}'] = marks_data
-
-                        status_update(f'Data successsfully collected for {usn}\n')
-
-                        progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
-
-                        time.sleep(2)
-
-                        driver.back()
-
-                        break
-
+                        break    
+                                    
                     except UnexpectedAlertPresentException:
-                        alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
+                        alert = conn_support.check_alert()
                         alert_text = alert.text
 
-                        status_update(f'Error for {usn} because {alert_text}')
+                        self.status_update(f'Error for {usn} because {alert_text}')
 
                         if alert_text == 'University Seat Number is not available or Invalid..!':
-                            status_update('Moving to the next USN.\n')
-                            progress.config(value=(k - int(firstnum_value) + 1)/(int(lastnum_value) - int(firstnum_value) + 1)*100)
-                            skipped_usns.append(usn)
+                            self.status_update('Moving to the next USN.\n')
+                            self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
+                            self.skipped_usns.append(usn)
                             alert.accept()
                             break
                         else:
-                            status_update('Trying again.\n')
+                            self.status_update('Trying again.\n')
                             alert.accept()
 
                     except:
-                        soup2 = BeautifulSoup(driver.page_source, 'lxml')
-                        occur = soup2.find_all('b', string='University Seat Number')
+                        occur = conn_support.stuck_page()
+                        
                         if len(occur) > 0:
-                            status_update(f'There was an error collecting data for {usn}. Trying again.\n')
-                            driver.back()
+                            self.status_update(f'There was an error collecting data for {usn}. Trying again.\n')
+                            conn_support.driver.back()
                         else:
-                            status_update(f'Error! Retrying after {delay_value} seconds. Retry {this_retry+1} of {retries_value}\n')
+                            self.status_update(f'Error! Retrying after {self.delay_value} seconds. Retry {this_retry+1} of {self.retries_value}\n')
                             this_retry += 1
-                            time.sleep(int(delay_value))
-                            driver.refresh()
+                            conn_support.sleep(self.delay_value)
+                            conn_support.driver.refresh()
 
                 else:
-                    if to_abort:
-                        status_update('ABORTED\n')
+                    if self.to_abort:
+                        self.status_update('ABORTED\n')
+                        self.to_abort = False
                         break
                     else:
-                        messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
+                        messagebox.showerror(title='Connection Error', message=f'Maximum number of retries reached ({self.retries_value}).\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
                         break
                         
             except:
                 messagebox.showerror(title='Unknown Error', message='There was an unknown error.\nData collected so far (if any) will be saved.\n\nPlease try again after some time.')
                 break
         
-        driver.quit()
-        try_again()
+        conn_support.driver.quit()
 
-        if bool(data_dict):
-            if len(skipped_usns) > 0:
-                status_update(f'These USNs were skipped {skipped_usns}.\n')
+        if bool(self.data_dict):
+            if self.skipped_usns:
+                self.status_update(f'These USNs were skipped {self.skipped_usns}.\n')
             else:
-                status_update('No USNs were skipped.\n')
+                self.status_update('No USNs were skipped.\n')
 
-            list_of_student_dfs = []
+            dataproc = DataProcessor()
+            dataproc.preprocess(self.data_dict)
 
-            for id, marks_data in data_dict.items():
-
-                this_usn, this_name = tuple(id.split('+'))
-                rows = marks_data.find_all('div', class_='divTableRow')
-
-                data = []
-                for row in rows:
-                    cells = row.find_all('div', class_='divTableCell')
-                    data.append([cell.text.strip() for cell in cells])
-                
-                df_temp = pd.DataFrame(data[1:], columns=data[0])
-
-                subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
-                headers = df_temp.columns[2:-1]
-
-                ready_columns = [(name, header) for name in subjects for header in headers]
-
-                student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
-                
-                student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
-
-                list_of_student_dfs.append(student_df)
-
-            final_df = pd.concat(list_of_student_dfs).reset_index(drop=True)
-
-            df2 = final_df.apply(pd.to_numeric, errors='ignore')
-
-            collected_usns = list(df2[('USN','')])
-
-            first_USN, last_USN = collected_usns[0], collected_usns[-1]
-            
-            folder_path = f'20{batch_value} {branch_value} semester {sem_value} VTU results'
-            os.makedirs(folder_path, exist_ok=True)
-            file_path_csv = os.path.join(folder_path, f'{branch_value} {first_USN} to {last_USN}.csv')
-
-            df2.to_csv(file_path_csv)
-
-            continue_app = messagebox.askyesno(title='Continue?', message=f'Data collected for USNs {first_USN} to {last_USN} and saved in a csv file.\n\nPress "Yes" to continue to collect data of other students.\n\nPress "No" to quit the app.')
-            if not continue_app:
-                scraper_close()
-            else:
-                status_update('Start Again.\n')
-                try_again()
+            messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.first_USN} to {dataproc.last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 
         else:
             messagebox.showinfo(title='No Data', message='No data was collected.')
-            status_update('Start Again.\n')
-            try_again()
+        
+        self.status_update('Start again or close this window.\n')
+        self.try_again()
 
-    def start_thread():
-        global options
-        options = Options()
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        options.unhandled_prompt_behavior = 'ignore'
-        if not messagebox.askyesno(title='Look at Process', message='Do you wish to look at the automated data collection process?'):
-            options.add_argument("--headless=new")
 
-        for button in scraper_buttons.winfo_children():
-            button.config(state='disabled')
+class AnalyzerFrame(TemplateWindow):
+    analyzer_art = r'''
+     __   _______ _   _   __  __          _           _             _                     _             
+     \ \ / /_   _| | | | |  \/  |__ _ _ _| |__ ___   /_\  _ _  __ _| |_  _ ______ _ _    /_\  _ __ _ __ 
+      \ V /  | | | |_| | | |\/| / _` | '_| / /(_-<  / _ \| ' \/ _` | | || |_ / -_) '_|  / _ \| '_ \ '_ \
+       \_/   |_|  \___/  |_|  |_\__,_|_| |_\_\/__/ /_/ \_\_||_\__,_|_|\_, /__\___|_|   /_/ \_\ .__/ .__/
+                                                                      |__/                   |_|  |_|   
+    '''
 
-        threading.Thread(target=start_app).start()
+    filepaths = []
 
-    main_window.withdraw()
-    scraper_window = Toplevel()
-    scraper_window.title('VTU Marks Scraper App')
-    scraper_window.config(padx=40, pady=10)
-    
-    scraper_window.protocol("WM_DELETE_WINDOW", scraper_close)
-    scraper_window.grab_set()
+    def create_frame(self):
+        self.title('VTU Marks Analyzer App')
+        self.config(padx=10, pady=20)
 
-    form = Frame(scraper_window)
-    form.grid()
+        self.frame = ttk.Frame(self)
+        self.frame.pack()
 
-    Label(form, text=scraper_art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
+        self.frame.selection = ttk.Frame(self.frame)
+        self.frame.selection.grid()
 
-    Label(form, font=('Segoe UI',10), text='Region+College code (Ex: 1AM or 2KE etc): ').grid(column=0, row=1, sticky='w')
-    code_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    code_entry.grid(column=1, row=1)
+        ttk.Label(self.frame.selection, text=self.analyzer_art, font=('Courier', 7)).grid(columnspan=2, padx=10)
+        ttk.Label(self.frame.selection, font=('Segoe UI', 10), text='Select the csv file(s) from the appropriate folder:').grid(column=0, row=1, padx=10, pady=10)
 
-    Label(form, font=('Segoe UI',10), text='Batch (Ex: 22 or 21 etc): ').grid(column=0, row=2, sticky='w')
-    batch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    batch_entry.grid(column=1, row=2)
+        browse_button = ttk.Button(self.frame.selection, text='Browse', command=self.browse_files)
+        browse_button.grid(column=1, row=1, padx=10, sticky='w')
 
-    Label(form, font=('Segoe UI',10), text='Branch (Ex: CS or MT or CI etc): ').grid(column=0, row=3, sticky='w')
-    branch_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    branch_entry.grid(column=1, row=3)
+        self.frame.buttons = ttk.Frame(self.frame)
+        self.frame.buttons.grid(pady=10)
 
-    Label(form, font=('Segoe UI',10), text='First Number in USN (Ex: 1 or 25 etc): ').grid(column=0, row=4, sticky='w')
-    firstnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    firstnum_entry.grid(column=1, row=4)
+        self.frame.buttons.clear = ttk.Button(self.frame.buttons, text='Clear', command=self.clear_box, state='disabled')
+        self.frame.buttons.clear.grid(column=1, row=0, padx=10)
 
-    Label(form, font=('Segoe UI',10), text='Last Number in USN (Ex: 5 or 50 etc): ').grid(column=0, row=5, sticky='w')
-    lastnum_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    lastnum_entry.grid(column=1, row=5)
+        self.frame.buttons.analyze = ttk.Button(self.frame.buttons, text='Analyze', command=self.analyze_and_save, state='disabled')
+        self.frame.buttons.analyze.grid(column=3, row=0, padx=10)
 
-    Label(form, font=('Segoe UI',10), text='Semester (Ex: 1 or 2 etc): ').grid(column=0, row=6, sticky='w')
-    sem_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    sem_entry.grid(column=1, row=6)
+        self.frame.output = ttk.Frame(self.frame)
 
-    Label(form, font=('Segoe UI',10), text='Retry time delay (seconds): ').grid(column=0, row=7, sticky='w')
-    delay_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    delay_entry.grid(column=1, row=7)
+        self.frame.output.filebox = scrolledtext.ScrolledText(self.frame.output, state='disabled', wrap='word', width=80, height=8, font=('Segoe UI', 10))
+        self.frame.output.filebox.grid(padx=20, pady=20)
 
-    Label(form, font=('Segoe UI',10), text='Number of retries: ').grid(column=0, row=8, sticky='w')
-    retries_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    retries_entry.grid(column=1, row=8)
-
-    Label(form, font=('Segoe UI',10), text='Result page URL (starts with https://): ').grid(column=0, row=9, sticky='w')
-    url_entry = ttk.Entry(form, width=40, font=('Segoe UI',10))
-    url_entry.grid(column=1, row=9)
-
-    scraper_buttons = Frame(scraper_window)
-    scraper_buttons.grid(column=0, row=10, pady=10)
-
-    verify_button = ttk.Button(scraper_buttons, text='Verify', command=check_error, width=15)
-    verify_button.grid(column=0, row=0, padx=10, pady=10, columnspan=3)
-
-    collect_button = ttk.Button(scraper_buttons, text='Collect', command=start_thread, width=15, state='disabled')
-    collect_button.grid(column=1, row=1, padx=10, pady=10)
-
-    reset_button = ttk.Button(scraper_buttons, text='Reset', command=reset_entries, width=15, state='disabled')
-    reset_button.grid(column=0, row=1, padx=10, pady=10)
-
-    abort_button = ttk.Button(scraper_buttons, text='Abort', width=15, command=abort_app, state='disabled')
-    abort_button.grid(column=2, row=1, padx=10, pady=10)
-
-    loading_label = Label(scraper_window, font=('Segoe UI',11), text='Loading...')
-
-    status_progress = Frame(scraper_window)
-
-    progress = ttk.Progressbar(status_progress, orient='horizontal', length=550, mode='determinate')
-
-    statusbox = scrolledtext.ScrolledText(status_progress, state='disabled', wrap=WORD, width=80, height=8, font=('Segoe UI', 10))
-
-    my_credit = Frame(scraper_window)
-    my_credit.grid(column=0, row=12, columnspan=2)
-
-    Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
-
-    gitlink = Label(my_credit, text="My GitHub", fg="blue", cursor="hand2")
-    gitlink.pack()
-    gitlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/nithinhm"))
-
-    dinlink = Label(my_credit, text="My LinkedIn", fg="blue", cursor="hand2")
-    dinlink.pack()
-    dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
-
-    check_connection_thread()
-
-    scraper_window.mainloop()
-
-def run_analyzer():
-    def clear_box():
-        global filepaths
-        filebox.config(state='normal')
-        filebox.delete('1.0', END)
-        filebox.config(state='disabled')
-        output.grid_remove()
-        clear_button.config(state='disabled')
-        analyze_button.config(state='disabled')
-        filepaths.clear()
-
-    def browse_files():
-        global filepaths
-
-        if filepaths:
+    def browse_files(self):
+        if self.filepaths:
             file_list = list(fd.askopenfilenames(title='Select file(s)', filetypes=[("csv files", "*.csv")]))
         else:
             file_list = list(fd.askopenfilenames(title='Select file(s)', initialdir=current_dir, filetypes=[("csv files", "*.csv")]))
         
         if file_list:
-            output.grid(row=2, column=0)
-            filebox.grid(padx=20, pady=20)
-            filebox.config(state='normal')
-
+            self.frame.output.grid()
+            self.frame.output.filebox.config(state='normal')
             for path in file_list:
-                if path not in filepaths:
-                    filebox.insert(END, path+'\n\n')
-                    filepaths.append(path)
-            filebox.config(state='disabled')
+                if path not in self.filepaths:
+                    self.frame.output.filebox.insert('end', path+'\n\n')
+                    self.filepaths.append(path)
+            self.frame.output.filebox.config(state='disabled')
 
-            clear_button.config(state='normal')
-            analyze_button.config(state='normal')
+            self.frame.buttons.clear.config(state='normal')
+            self.frame.buttons.analyze.config(state='normal')
 
-    def analyzer_close():
-        analyzer_window.destroy()
-        main_window.deiconify()
+    def clear_box(self):
+        self.frame.output.filebox.config(state='normal')
+        self.frame.output.filebox.delete('1.0', 'end')
+        self.frame.output.filebox.config(state='disabled')
+        self.frame.output.grid_remove()
+        self.frame.buttons.clear.config(state='disabled')
+        self.frame.buttons.analyze.config(state='disabled')
+        self.filepaths.clear()
 
-    def analyze_data():
-        global filepaths
+    def analyze_and_save(self):
+        processor = DataProcessor()
 
-        filepaths.sort(key = lambda x: x.split('/')[-1])
-
-        list_of_data = [pd.read_csv(filepath, header=[0,1]) for filepath in filepaths]
-
-        full_data = pd.concat(list_of_data).reset_index(drop=True)
-        full_data = full_data.drop_duplicates(subset=full_data.columns[1]).reset_index(drop=True)
-        full_data.drop(full_data.columns[0], axis=1, inplace=True)
-        full_data.rename(columns={name:'' for name in full_data.columns.levels[1] if 'level' in name}, inplace=True)
-
-        cols = list(full_data.columns)[2:]
-        cols.sort(key = lambda x: x[0].split('(')[-1][5:-1])
-        full_data = full_data[[('USN',''), ('Student Name','')] + cols]
-
-        full_data.index += 1
-
-        full_data = full_data.apply(pd.to_numeric, errors='ignore')
-
-        cols = list(full_data.columns)[2:]
-
-        USNs = list(full_data['USN'])
-        first_USN, last_USN = USNs[0], USNs[-1]
-        branch_value = first_USN[5:7]
-        batch_value = first_USN[3:5]
-
-        overall_column = full_data[full_data.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
-        temp_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
-
-        result_cases = ['A', 'P', 'F', 'W', 'X']
-        not_present1 = list(set(result_cases) - set(list(temp_df.columns)))
-
-        if len(not_present1) > 0:
-            for i in not_present1:
-                temp_df[i] = 0
-
-        students_passed_all = sum(temp_df['F'] == 0)
-        students_failed = sum(temp_df['F'] > 0)
-        students_failed_one = sum(temp_df['F'] == 1)
-        students_eligible = len(temp_df[temp_df['A'] != len(cols)]['F'])
-        overall_pass_percentage = round(students_passed_all/students_eligible*100, 2)
-
-        stats_df = pd.Series({'Number of students passed in all subjects':students_passed_all, 'Number of students failed atleast 1 subject':students_failed, 'Number of students failed in only 1 subject':students_failed_one, 'Number of eligible students':students_eligible, 'Overall pass percentage':overall_pass_percentage}, name='')
-
-        result_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=0)
-        result_df.columns = [x[0] for x in result_df.columns]
-        result_df = result_df.T
-        not_present2 = list(set(result_cases) - set(list(result_df.columns)))
-
-        if len(not_present2) > 0:
-            for i in not_present2:
-                result_df[i] = 0
-
-        result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
-
-        pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
-        result_df['Subject Pass Percentage'] = pass_percentage_column
-
-        labels = [x.split('(')[-1][:-1] for x in result_df.index]
-
-        x = np.arange(len(labels))
-
-        fig, ax = plt.subplots(figsize=(15,7))
-        ax.bar(x, pass_percentage_column)
-
-        ax.set_xlabel('Subject Code', fontsize='x-large')
-        ax.set_ylabel('Pass Percentage', fontsize='x-large')
-        ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
-        ax.set_xticks(x, labels, fontsize='x-large')
-        ax.set_yticks(ax.get_yticks(), fontsize='large')
-
-        for i,v in enumerate(result_df.index):
-            ax.text(i, pass_percentage_column[i]+2, f"{result_df.loc[v, 'Subject Pass Percentage']}%", ha='center', fontsize='x-large')
-
-        fig.tight_layout()
+        processor.analyze_data(self.filepaths)
 
         folder_path = None
 
         while not folder_path:
-            messagebox.showinfo(title='Select a folder', message='Select a folder in which to save the excel file.')
+            messagebox.showinfo(title='Select folder', message='Select a folder in which to save the excel file.')
             folder_path = fd.askdirectory(title='Select folder')
 
-        file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {branch_value} branch students.jpg')
+        processor.save_data(folder_path)
 
-        fig.savefig(file_path_image)
-
-        full_data['Overall_Total'] = overall_column
-
-        file_path_excel = os.path.join(folder_path, f'20{batch_value} {branch_value} {first_USN} to {last_USN} VTU results.xlsx')
-
-        with pd.ExcelWriter(file_path_excel) as writer:
-            full_data.to_excel(writer, sheet_name='Student-wise results')
-            stats_df.to_excel(writer, sheet_name='Stats of students')
-            result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
-
-        analyzer_window.withdraw()
-        if messagebox.askyesno(title='Analysis Complete.', message=f'The data has been analyzed.\n\nYou can find the excel file and the image file in the selected folder:\n\n{folder_path}\n\nPress "Yes" to analyze data for other branch students.\n\nPress "No" to quit the app.'):
-            analyzer_window.deiconify()
-            clear_box()
-        else:
-            analyzer_close()
+        messagebox.showinfo(title='Analysis Complete.', message=f'The data has been analyzed.\n\nYou can continue to analyze data of other students.\n\nOr you can close the analyzer window to return to the main interface.')
+        self.clear_box()
 
 
-    main_window.withdraw()
-    analyzer_window = Toplevel()
-    analyzer_window.title('VTU Marks Analyzer App')
-    analyzer_window.config(padx=10, pady=20)
-    
-    analyzer_window.protocol("WM_DELETE_WINDOW", analyzer_close)
-    analyzer_window.grab_set()
-
-    selection = Frame(analyzer_window)
-    selection.grid()
-
-    Label(selection, text=analyzer_art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
-    Label(selection, font=('Segoe UI', 10), text='Select the csv file(s) from the appropriate folder:').grid(column=0, row=1, padx=10, pady=10)
-
-    browse_button = ttk.Button(selection, text='Browse', command=browse_files)
-    browse_button.grid(column=1, row=1, padx=10, sticky='w')
-
-    analyzer_buttons = Frame(analyzer_window)
-    analyzer_buttons.grid(pady=10)
-
-    clear_button = ttk.Button(analyzer_buttons, text='Clear', command=clear_box, state='disabled')
-    clear_button.grid(column=1, row=0, padx=10)
-
-    analyze_button = ttk.Button(analyzer_buttons, text='Analyze', command=analyze_data, state='disabled')
-    analyze_button.grid(column=3, row=0, padx=10)
-
-    output = Frame(analyzer_window)
-
-    filebox = scrolledtext.ScrolledText(output, state='disabled', wrap=WORD, width=80, height=8, font=('Segoe UI', 10))
-
-    my_credit = Frame(analyzer_window)
-    my_credit.grid(row=3, column=0)
-
-    Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
-
-    gitlink = Label(my_credit, text="My GitHub", fg="blue", cursor="hand2")
-    gitlink.pack()
-    gitlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/nithinhm"))
-
-    dinlink = Label(my_credit, text="My LinkedIn", fg="blue", cursor="hand2")
-    dinlink.pack()
-    dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
-
-    analyzer_window.mainloop()
-
-main_window = Tk()
-main_window.title("Welcome | Select app")
-main_window.config(pady=20)
-
-Label(main_window, font=('Segoe UI', 10), text='Welcome to the VTU Marks Scraper and Analyzer App').grid(columnspan=2)
-
-Label(main_window, font=('Segoe UI', 10), text='Select the app to proceed:').grid(row=1, columnspan=2, sticky='w', padx=20, pady=20)
-
-main_buttons = Frame(main_window)
-main_buttons.grid(padx=20)
-
-s_button = ttk.Button(main_buttons, text='\n\n\nMarks Scraper\n\n\n', command=run_scraper, width=30)
-s_button.grid(row=2, column=0)
-a_button = ttk.Button(main_buttons, text='\n\n\nMarks Analyzer\n\n\n', command=run_analyzer, width=30)
-a_button.grid(row=2, column=1)
-
-my_credit = Frame(main_window)
-my_credit.grid(pady=10)
-
-Label(my_credit, font=('Segoe UI', 8), text='App developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083').pack()
-
-gitlink = Label(my_credit, text="My GitHub", fg="blue", cursor="hand2")
-gitlink.pack()
-gitlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/nithinhm"))
-
-dinlink = Label(my_credit, text="My LinkedIn", fg="blue", cursor="hand2")
-dinlink.pack()
-dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
-
-main_window.mainloop()
+if __name__=='__main__':
+    window = MainFrame()
+    window.mainloop()
