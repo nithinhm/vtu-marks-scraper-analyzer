@@ -144,4 +144,3 @@ class DataProcessor():
             self.full_data.to_excel(writer, sheet_name='Student-wise results')
             self.stats_df.to_excel(writer, sheet_name='Stats of students')
             self.result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
-

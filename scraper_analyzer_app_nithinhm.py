@@ -71,7 +71,7 @@ class ScraperFrame(TemplateWindow):
                                                                            /_/                       /_/   /_/       
     '''
 
-    default_entry_values = ['1AM22CS001', '1AM22CS100', '5', '5', 'https://results.vtu.ac.in/JFEcbcs23/index.php']
+    default_entry_values = ['1AM22CS001', '1AM22CS100', '5', '5', 'https://results.vtu.ac.in/JJEcbcs23/index.php']
 
     to_abort = None
 
@@ -460,5 +460,16 @@ class AnalyzerFrame(TemplateWindow):
 
 
 if __name__=='__main__':
+
+    mess = '''
+
+    Before running the application, ensure that you have installed Pytesseract.
+
+    Install Pytesseract (for Windows) through this link https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe in the default directory.
+    
+    '''
+
+    print(mess)
+
     window = MainFrame()
     window.mainloop()
