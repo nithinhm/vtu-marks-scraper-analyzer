@@ -3,12 +3,13 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import os
+import re
 
 
 matplotlib.use('agg')
 
 class DataProcessor():
-    def preprocess(self, data_dict):
+    def preprocess(self, data_dict, is_reval):
         list_of_student_dfs = []
 
         for id, marks_data in data_dict.items():
@@ -24,12 +25,19 @@ class DataProcessor():
             df_temp = pd.DataFrame(data[1:], columns=data[0])
 
             subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
-            headers = df_temp.columns[2:-1]
+
+            if not is_reval:
+                headers = df_temp.columns[2:-1]
+            else:
+                headers = df_temp.columns[2:]
 
             ready_columns = [(name, header) for name in subjects for header in headers]
 
-            student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
-            
+            if not is_reval:
+                student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+            else:
+                student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+
             student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
 
             list_of_student_dfs.append(student_df)
@@ -45,16 +53,39 @@ class DataProcessor():
         batch_value = self.first_USN[3:5]
         branch_value = self.first_USN[5:7]
         
-        folder_path = f'20{batch_value} {branch_value} VTU results'
+        if not is_reval:
+            folder_path = f'20{batch_value} {branch_value} VTU results'
+        else:
+            folder_path = f'Reval 20{batch_value} {branch_value} VTU results'
+
         os.makedirs(folder_path, exist_ok=True)
-        file_path_csv = os.path.join(folder_path, f'{branch_value} {self.first_USN} to {self.last_USN}.csv')
+
+        if not is_reval:
+            file_path_csv = os.path.join(folder_path, f'Raw {branch_value} {self.first_USN} to {self.last_USN}.csv')
+        else:
+            file_path_csv = os.path.join(folder_path, f'Raw Reval {branch_value} {self.first_USN} to {self.last_USN}.csv')
 
         df2.to_csv(file_path_csv)
     
     def analyze_data(self, filepaths):
+        self.no_data = None
+        self.reval = None
+
         filepaths.sort(key = lambda x: x.split('/')[-1])
 
-        list_of_data = [pd.read_csv(filepath, header=[0,1]) for filepath in filepaths]
+        list_of_data = []
+        reval_data = []
+
+        for filepath in filepaths:
+            data = pd.read_csv(filepath, header=[0,1])
+            if 'Reval' in filepath:
+                reval_data.append(data)
+            else:
+                list_of_data.append(data)
+
+        if not list_of_data:
+            self.no_data = True
+            return
 
         full_data = pd.concat(list_of_data).reset_index(drop=True)
         full_data = full_data.drop_duplicates(subset=full_data.columns[1]).reset_index(drop=True)
@@ -62,19 +93,54 @@ class DataProcessor():
         full_data.rename(columns={name:'' for name in full_data.columns.levels[1] if 'level' in name}, inplace=True)
 
         cols = list(full_data.columns)[2:]
-        cols.sort(key = lambda x: x[0].split('(')[-1][5:-1])
+        cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
         full_data = full_data[[('USN',''), ('Student Name','')] + cols]
-
-        full_data.index += 1
-
-        full_data = full_data.apply(pd.to_numeric, errors='ignore')
-
-        cols = list(full_data.columns)[2:]
 
         USNs = list(full_data['USN'])
         self.first_USN, self.last_USN = USNs[0], USNs[-1]
         self.branch_value = self.first_USN[5:7]
         self.batch_value = self.first_USN[3:5]
+
+        full_data = full_data.apply(pd.to_numeric, errors='ignore')
+
+        if reval_data:
+            full_data.set_index(('USN',''), inplace=True)
+
+            full_reval_data = pd.concat(reval_data).reset_index(drop=True)
+            full_reval_data = full_reval_data.drop_duplicates(subset=full_reval_data.columns[1]).reset_index(drop=True)
+            full_reval_data.drop(full_reval_data.columns[0], axis=1, inplace=True)
+            full_reval_data.rename(columns={name:'' for name in full_reval_data.columns.levels[1] if 'level' in name}, inplace=True)
+
+            reval_cols = list(full_reval_data.columns)[2:]
+            reval_cols.sort(key = lambda x:re.findall(r'\d+', x[0])[-1])
+            full_reval_data = full_reval_data[[('USN',''), ('Student Name','')] + reval_cols]
+
+            full_reval_data = full_reval_data.apply(pd.to_numeric, errors='ignore')
+            full_reval_data.set_index(('USN',''), inplace=True)
+
+            sub_cols = list(set([x[0] for x in full_reval_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_data.columns if '(' in x[0]])))
+
+            # Iterate over the rows of the second dataframe
+            for index, row in full_reval_data.iterrows():
+                # Iterate over the columns (subjects) of the second dataframe
+                for subject in sub_cols:
+                    # Check if the student has applied for revaluation in this subject
+                    if not pd.isna(row[(subject, 'Final Marks')]):
+                        # Update the marks in the first dataframe
+                        full_data.loc[index, (subject, 'External Marks')] = row[(subject, 'Final Marks')]
+                        # Update the result in the first dataframe
+                        full_data.loc[index, (subject, 'Result')] = row[(subject, 'Final Result')]
+                        # update the total marks in the first dataframe
+                        full_data.loc[index, (subject, 'Total')] = int(full_data.loc[index, (subject, 'Internal Marks')]) + int(full_data.loc[index, (subject, 'External Marks')])
+
+            full_data.reset_index(inplace=True)
+
+            self.reval = True
+
+        full_data.index += 1
+
+        if (full_data == 'P *').any().any():
+            full_data.replace('P *', 'P', inplace=True)
 
         overall_column = full_data[full_data.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
         temp_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
@@ -114,33 +180,45 @@ class DataProcessor():
 
         x = np.arange(len(labels))
 
-        self.fig, ax = plt.subplots(figsize=(15,7))
+        self.fig, ax = plt.subplots(figsize=(25,10))
         ax.bar(x, pass_percentage_column)
 
         ax.set_xlabel('Subject Code', fontsize='x-large')
         ax.set_ylabel('Pass Percentage', fontsize='x-large')
-        ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
+        if not self.reval:
+            ax.set_title('Subject-wise Pass Percentages', fontsize='xx-large')
+        else:
+            ax.set_title('After Reval Subject-wise Pass Percentages', fontsize='xx-large')
         ax.set_xticks(x, labels, fontsize='x-large')
-        ax.set_yticks(ax.get_yticks(), fontsize='large')
+        ax.set_yticks(ax.get_yticks(), fontsize='x-large')
 
         for i,v in enumerate(result_df.index):
             ax.text(i, pass_percentage_column[i]+2, f"{result_df.loc[v, 'Subject Pass Percentage']}%", ha='center', fontsize='x-large')
 
         self.fig.tight_layout()
 
-        full_data['Overall_Total'] = overall_column
+        full_data['Overall Total'] = overall_column
 
         self.full_data = full_data
 
 
     def save_data(self, folder_path):
-        file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {self.branch_value} branch students.jpg')
+        if not self.reval:
+            file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
+            file_path_excel = os.path.join(folder_path, f'20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
+        else:
+            file_path_image = os.path.join(folder_path, f'Reval Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
+            file_path_excel = os.path.join(folder_path, f'Reval 20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
 
         self.fig.savefig(file_path_image)
 
-        file_path_excel = os.path.join(folder_path, f'20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results.xlsx')
+        # to avoid getting blank row after column names
+        def save_double_column_df(df, xl_writer, startrow=0, **kwargs):
+            df.drop(df.index).to_excel(xl_writer, startrow=startrow, **kwargs)
+            df.to_excel(xl_writer, startrow=startrow + 1, header=False, **kwargs)
+
+        sheet_data = {'Student-wise results':self.full_data, 'Stats of students':self.stats_df, 'Subject-wise results':self.result_df.fillna(0)}
 
         with pd.ExcelWriter(file_path_excel) as writer:
-            self.full_data.to_excel(writer, sheet_name='Student-wise results')
-            self.stats_df.to_excel(writer, sheet_name='Stats of students')
-            self.result_df.fillna(0).to_excel(writer, sheet_name='Subject-wise results')
+            for name, data in sheet_data.items():
+                save_double_column_df(data, writer, sheet_name=name)

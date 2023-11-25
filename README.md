@@ -1,27 +1,20 @@
 # VTU Marks Scraper and Analyzer
-The contents of this repository include 2 apps:
 
-1. **Scraper and Analyzer App**
+This app is designed to retrieve student marks data from the VTU (Visvesvaraya Technological University) website and analyze it. It includes the following options:
 
-    This main app contains the following two options:
+- **Marks Scraper**: An automated tool that retrieves student marks data from the VTU website and stores it in a CSV file. Depending on the URL link that is entered in the scraper, the tool will decide whether to collect revaluation marks or regular marks.
 
-    - **Marks Scraper**: An automated tool designed to retrieve student marks data from the VTU (Visvesvaraya Technological University) website and store it in a CSV file. This option is intended for data scraping and gathering marks information.
+- **Marks Analyer**: A tool that generates result analysis based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This tool can update the old marks with the new revaluation marks (if any) and provide an updated analysis.
 
-    - **Marks Analyer**: A tool that generates result analysis based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This option is focused on analyzing the collected marks data and presenting insights.
-
-2. **Revaluation Marks Scraper App**
-
-    An automated tool that collects data of revaluation marks similar to the above scraper.
-
-The repository provides both the source code and pre-compiled executables (GUI) of both apps for ease of use.
+The repository provides both the source code and a pre-compiled executable (GUI) for ease of use.
 
 ## Features
 
 - Collects marks data for all students of a branch from the VTU website.
 - Supports automation using Selenium WebDriver.
-- Handles the USN entry and CAPTCHA verification automatically.
+- **Handles the USN entry and CAPTCHA verification automatically.**
 - Processes the collected data to generate an Excel file.
-- Provides easy-to-use graphical-user interface (GUI) apps through Tkinter.
+- Provides a easy-to-use graphical-user interface (GUI) app through Tkinter.
 - Handles common errors. If the number of retries crosses the set limit, the data collected till that point will be saved.
 
 ## Prerequisites
@@ -29,12 +22,10 @@ The repository provides both the source code and pre-compiled executables (GUI) 
 Before running the application, ensure that you have the following prerequisites:
 
 - Python 3.x
-- Chrome WebDriver
-- Pytesseract
+- Google Chrome
+- Tesseract
 
-Make sure to download and configure the Chrome WebDriver according to your system.
-
-Install [Pytesseract (for Windows)](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
+Install [Tesseract (for Windows)](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
 
 ## Usage
 
@@ -56,32 +47,38 @@ cd vtu-marks-scraper-analyzer
 pip install -r requirements.txt
 ```
 
-4. Run the main app using Python:
+4. Run the app using Python:
 
 ```
 python "scraper_analyzer_app_nithinhm.py"
 ```
 5. Click on the `Marks Scraper` button. The scraper app will open.
 
-6. Enter the required information, such as the college code, branch code, batch year etc.
+6. Enter the required information, such as the first USN, last USN, etc.
 
-7. Click "Verify" to verify the input. If the entered data is valid, you can click "Collect".
+7. Click "Verify" to verify the input. If the entered data is valid, you can click "Collect". You will be asked whether you want to look at the automation process or not.
 
 8. Next, sit back and relax while the tool collects the marks data for the specified students. (You could also abort the collection process by clicking "Abort." Data collected till that point, if any, will be saved.)
 
-9. Once the process is complete, you will find the collected marks data in a CSV file within the appropriate subfolder in the same directory.
+9. Once the process is complete, you will find the collected marks data in a raw CSV file within the appropriate subfolder in the same directory.
 
-10. If you wish, you can continue collecting data for other branches or simply quit. (You could also collect data in chunks for the same branch and use the analyzer app to combine all the chunks to generate the final analysis report.)
+10. If you wish, you can continue to gather data for other branches or simply stop. (You can also gather data in segments for the same branch and use the analyzer app to merge all the segments to create the final analysis report.)
 
 11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
-12. Click on "Browse" and select the saved CSV file(s) that contain the marks data.
+12. Select "Browse" and choose the saved raw CSV files that hold the marks data. If you've used the scraper to gather revaluation marks, you can include those files here along with the original CSV containing the old marks.
 
-13. Click on "Analyze" and do as instructed. You will get the analysis report for the branch in the selected folder.
+13. Click on "Analyze" and do as instructed. This will generate an Excel file with the marks and their analysis (check the different sheets) in the selected folder.
+
+## Important Note
+
+- Currently, this app is designed to only retrieve the first result table displayed on the result page and does not support the collection of arrear exam results.
+
+- Please avoid running the scraper on multiple systems simultaneously using the same internet IP address. There's a risk that your IP could be blocked from accessing the specific result link forever. Always ensure to use the tool responsibly to prevent any disruptions in access.
 
 ## Executable
 
-Alternatively, you can download and use the pre-compiled executable files present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executables are compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
+Alternatively, you can download and use the pre-compiled executable file present in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable is compiled using PyInstaller and does not require Python installation. But you still need to install Pytesseract in the default directory.
 
 Run the executable by double-clicking it.
 

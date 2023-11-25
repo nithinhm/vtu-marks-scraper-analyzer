@@ -1,4 +1,4 @@
-from tkinter import ttk, scrolledtext, messagebox, Toplevel
+from tkinter import ttk, scrolledtext, messagebox, Toplevel, BooleanVar
 from tkinter import filedialog as fd
 from selenium.common.exceptions import *
 import re
@@ -8,6 +8,12 @@ from gui import TemplateWindow
 from connection import Connection
 from data_processor import DataProcessor
 
+mess = \
+'''
+    Before running the application, ensure that you have installed Tesseract.
+
+    Install Tesseract (for Windows) through this link https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe in the default directory.
+'''
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -76,6 +82,7 @@ class ScraperFrame(TemplateWindow):
     to_abort = None
 
     def create_frame(self):
+        self.update_idletasks()
         self.title('VTU Marks Scraper App')
         self.config(padx=40, pady=10)
 
@@ -96,6 +103,9 @@ class ScraperFrame(TemplateWindow):
             ttk.Entry(self.frame.form, width=40, font=('Segoe UI',10)).grid(column=1, row=1+i)
         
         self.frame.form.entries = [e for e in self.frame.form.winfo_children() if isinstance(e, ttk.Entry)]
+        
+        self.frame.form.is_reval = BooleanVar(self.frame.form)
+        self.frame.form.reval = ttk.Label(self.frame.form, font=('Segoe UI',10), text='Will collect revaluation marks')
 
         self.frame.buttons = ttk.Frame(self.frame)
         self.frame.buttons.grid(pady=10)
@@ -154,6 +164,7 @@ class ScraperFrame(TemplateWindow):
                 self.frame.buttons.buttons[name].config(state='disabled')
     
     def reset_default_entry_values(self):
+        self.frame.form.reval.grid_remove()
         self.toggle_entries('normal')
         for i, e in enumerate(self.frame.form.entries):
             e.delete(0, 'end')
@@ -161,7 +172,7 @@ class ScraperFrame(TemplateWindow):
         self.toggle_buttons(v=1, r=0, c=0)
 
     def open_top_wait(self):
-        self.top_wait = Toplevel()
+        self.top_wait = Toplevel(self)
         self.top_wait.title('Just a moment')
         ttk.Label(self.top_wait, text='Checking your internet connection...').pack(padx=20, pady=5)
         self.top_wait.lift()
@@ -204,6 +215,9 @@ class ScraperFrame(TemplateWindow):
             error_list.append('USN Error! First and last USNs need to match (except for last three characters)')
         elif int(first_usn[-3:]) > int(last_usn[-3:]):
             error_list.append('USN Error! First USN has to be less than last USN')
+
+        first_usn = first_usn.upper()
+        last_usn = last_usn.upper()
         
         if not delay_value.isnumeric():
             error_list.append('Delay Error! Enter a valid number for the delay.')
@@ -223,6 +237,14 @@ class ScraperFrame(TemplateWindow):
                 self.delay_value = int(delay_value)
                 self.retries_value = int(retries_value)
                 self.url_value = url_value
+
+                if 'RV' in self.url_value:
+                    self.frame.form.is_reval.set(True)
+                    self.frame.form.reval.grid(columnspan=2, pady=10)
+                else:
+                    self.frame.form.is_reval.set(False)
+                    self.frame.form.reval.grid_remove()
+
                 self.toggle_entries('disabled')
                 self.toggle_buttons(v=0, r=1, c=1)
                 self.frame.status.grid_remove()
@@ -278,6 +300,8 @@ class ScraperFrame(TemplateWindow):
 
         k = self.first_num - 1
 
+        cool = 0
+
         while k < self.last_num:
             k += 1
             this_retry = 0
@@ -297,7 +321,12 @@ class ScraperFrame(TemplateWindow):
 
                         if len(captcha_text) != 6:
                             self.status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
+                            cool += 1
                             conn_support.driver.refresh()
+                            if cool > 5:
+                                self.status_update('Waiting for a bit to avoid IP block.\n')
+                                cool = 0
+                                conn_support.sleep(2)
                             continue
                         else:
                             conn_support.captcha_submit(captcha_text)
@@ -305,10 +334,11 @@ class ScraperFrame(TemplateWindow):
                         self.data_dict = conn_support.get_info(self.data_dict)
 
                         self.status_update(f'Data successsfully collected for {usn}\n')
+                        cool = 0
 
                         self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
 
-                        conn_support.sleep(2)
+                        conn_support.sleep(3)
                         conn_support.driver.back()
 
                         break    
@@ -319,15 +349,22 @@ class ScraperFrame(TemplateWindow):
 
                         self.status_update(f'Error for {usn} because {alert_text}')
 
-                        if alert_text == 'University Seat Number is not available or Invalid..!':
+                        if alert_text == 'University Seat Number is not available or Invalid..!' or alert_text == 'You have not applied for reval or reval results are awaited !!!':
+                            cool += 1
                             self.status_update('Moving to the next USN.\n')
                             self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
                             self.skipped_usns.append(usn)
                             alert.accept()
                             break
-                        else:
-                            self.status_update('Trying again.\n')
+                        elif alert_text == '':
+                            self.status_update('\nUnfortunately, this IP address has been blocked due to excessive requests in a short period of time.\nYou will not be able to access this link using this IP address anymore.\nUse an internet connection with a different IP address or set a proxy server in your system settings.\n')
+                            self.to_abort = True
                             alert.accept()
+                            break
+                        else:
+                            cool += 1
+                            self.status_update('Trying again.\n')
+                            alert.accept()                    
 
                     except:
                         occur = conn_support.stuck_page()
@@ -340,6 +377,11 @@ class ScraperFrame(TemplateWindow):
                             this_retry += 1
                             conn_support.sleep(self.delay_value)
                             conn_support.driver.refresh()
+
+                    if cool > 5:
+                        self.status_update('Waiting for a bit to avoid IP block.\n')
+                        cool = 0
+                        conn_support.sleep(2)
 
                 else:
                     if self.to_abort:
@@ -363,7 +405,7 @@ class ScraperFrame(TemplateWindow):
                 self.status_update('No USNs were skipped.\n')
 
             dataproc = DataProcessor()
-            dataproc.preprocess(self.data_dict)
+            dataproc.preprocess(self.data_dict, self.frame.form.is_reval.get())
 
             messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.first_USN} to {dataproc.last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 
@@ -447,11 +489,15 @@ class AnalyzerFrame(TemplateWindow):
 
         processor.analyze_data(self.filepaths)
 
-        folder_path = None
+        if processor.no_data:
+            messagebox.showerror(title='Select file', message='Select atleast one result file other than Reval file.')
+            return
 
-        while not folder_path:
-            messagebox.showinfo(title='Select folder', message='Select a folder in which to save the excel file.')
-            folder_path = fd.askdirectory(title='Select folder')
+        messagebox.showinfo(title='Select folder', message='Select a folder in which to save the excel file.')
+        folder_path = fd.askdirectory(title='Select folder')
+
+        if not folder_path:
+            return
 
         processor.save_data(folder_path)
 
@@ -460,15 +506,6 @@ class AnalyzerFrame(TemplateWindow):
 
 
 if __name__=='__main__':
-
-    mess = '''
-
-    Before running the application, ensure that you have installed Pytesseract.
-
-    Install Pytesseract (for Windows) through this link https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe in the default directory.
-    
-    '''
-
     print(mess)
 
     window = MainFrame()
