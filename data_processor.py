@@ -9,63 +9,84 @@ import re
 matplotlib.use('agg')
 
 class DataProcessor():
-    def preprocess(self, data_dict, is_reval):
-        list_of_student_dfs = []
+    def preprocess(self, soup_dict, is_reval, main_sem):
 
-        for id, marks_data in data_dict.items():
+        dict_of_sems_dfs = {f'{sem}':[] for sem in range(8,0,-1)}
+
+        for id, soup in soup_dict.items():
 
             this_usn, this_name = tuple(id.split('+'))
-            rows = marks_data.find_all('div', class_='divTableRow')
+            sems_divs = soup.find_all('div', style="text-align:center;padding:5px;")
+            sems_num = [x.text.split(':')[-1].strip() for x in sems_divs]
+            sems_data = [sem_div.find_next_sibling('div') for sem_div in sems_divs]
 
-            data = []
-            for row in rows:
-                cells = row.find_all('div', class_='divTableCell')
-                data.append([cell.text.strip() for cell in cells])
+            for sem, marks_data in zip(sems_num, sems_data):
+                rows = marks_data.find_all('div', class_='divTableRow')
+
+                data = []
+                for row in rows:
+                    cells = row.find_all('div', class_='divTableCell')
+                    data.append([cell.text.strip() for cell in cells])
+                
+                df_temp = pd.DataFrame(data[1:], columns=data[0])
+
+                subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
+
+                if not is_reval:
+                    headers = df_temp.columns[2:-1]
+                else:
+                    headers = df_temp.columns[2:]
+
+                ready_columns = [(name, header) for name in subjects for header in headers]
+
+                if not is_reval:
+                    student_sem_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+                else:
+                    student_sem_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+
+                student_sem_df.columns = pd.MultiIndex.from_tuples(student_sem_df.columns, names=['', ''])
+
+                dict_of_sems_dfs[sem].append(student_sem_df)
+
+        dict_of_sems_dfs = {key:value for key, value in dict_of_sems_dfs.items() if value}
+
+        for sem in dict_of_sems_dfs:
+            final_df = pd.concat(dict_of_sems_dfs[sem]).reset_index(drop=True)
+
+            df2 = final_df.apply(pd.to_numeric, errors='ignore')
+
+            collected_usns = list(df2[('USN','')])
+
+            self.first_USN, self.last_USN = collected_usns[0], collected_usns[-1]
+
+            batch_value = self.first_USN[3:5]
+            branch_value = self.first_USN[5:7]
             
-            df_temp = pd.DataFrame(data[1:], columns=data[0])
-
-            subjects = [f'{name} ({code})' for name, code in zip(df_temp['Subject Name'], df_temp['Subject Code'])]
-
-            if not is_reval:
-                headers = df_temp.columns[2:-1]
+            if sem == main_sem:
+                if not is_reval:
+                    folder_path = f'Regular 20{batch_value} {branch_value} VTU results'
+                else:
+                    folder_path = f'Reval Regular 20{batch_value} {branch_value} VTU results'
             else:
-                headers = df_temp.columns[2:]
+                if not is_reval:
+                    folder_path = f'Arrear 20{batch_value} {branch_value} VTU results'
+                else:
+                    folder_path = f'Reval Arrear 20{batch_value} {branch_value} VTU results'
 
-            ready_columns = [(name, header) for name in subjects for header in headers]
+            os.makedirs(folder_path, exist_ok=True)
 
-            if not is_reval:
-                student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:-1].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+            if sem == main_sem:
+                if not is_reval:
+                    file_path_csv = os.path.join(folder_path, f'Raw Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                else:
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
             else:
-                student_df = pd.DataFrame([this_usn, this_name] + list(df_temp.iloc[:,2:].to_numpy().flatten()), index= [('USN',''), ('Student Name','')]+ready_columns).T
+                if not is_reval:
+                    file_path_csv = os.path.join(folder_path, f'Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                else:
+                    file_path_csv = os.path.join(folder_path, f'Reval Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
 
-            student_df.columns = pd.MultiIndex.from_tuples(student_df.columns, names=['', ''])
-
-            list_of_student_dfs.append(student_df)
-
-        final_df = pd.concat(list_of_student_dfs).reset_index(drop=True)
-
-        df2 = final_df.apply(pd.to_numeric, errors='ignore')
-
-        collected_usns = list(df2[('USN','')])
-
-        self.first_USN, self.last_USN = collected_usns[0], collected_usns[-1]
-
-        batch_value = self.first_USN[3:5]
-        branch_value = self.first_USN[5:7]
-        
-        if not is_reval:
-            folder_path = f'20{batch_value} {branch_value} VTU results'
-        else:
-            folder_path = f'Reval 20{batch_value} {branch_value} VTU results'
-
-        os.makedirs(folder_path, exist_ok=True)
-
-        if not is_reval:
-            file_path_csv = os.path.join(folder_path, f'Raw {branch_value} {self.first_USN} to {self.last_USN}.csv')
-        else:
-            file_path_csv = os.path.join(folder_path, f'Raw Reval {branch_value} {self.first_USN} to {self.last_USN}.csv')
-
-        df2.to_csv(file_path_csv)
+            df2.to_csv(file_path_csv)
     
     def analyze_data(self, filepaths):
         self.no_data = None

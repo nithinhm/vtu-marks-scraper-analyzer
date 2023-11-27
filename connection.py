@@ -40,17 +40,15 @@ class Connection:
         self.driver.find_element(By.NAME, 'captchacode').send_keys(captcha)
         self.driver.find_element(By.ID, 'submit').click()
 
-    def get_info(self, data_dict):
+    def get_info(self, soup_dict):
         student_name = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
         student_usn = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
 
         soup = BeautifulSoup(self.driver.page_source, 'lxml')
 
-        marks_data = soup.find('div', class_='divTableBody')
+        soup_dict[f'{student_usn}+{student_name}'] = soup
 
-        data_dict[f'{student_usn}+{student_name}'] = marks_data
-
-        return data_dict
+        return soup_dict
 
     def sleep(self, secs):
         time.sleep(secs)

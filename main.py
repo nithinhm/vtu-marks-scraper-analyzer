@@ -77,7 +77,7 @@ class ScraperFrame(TemplateWindow):
                                                                            /_/                       /_/   /_/       
     '''
 
-    default_entry_values = ['1AM22CS001', '1AM22CS100', '5', '5', 'https://results.vtu.ac.in/JJEcbcs23/index.php']
+    default_entry_values = ['1AM22CS001', '1AM22CS100', '1', '5', '5', 'https://results.vtu.ac.in/JJEcbcs23/index.php']
 
     to_abort = None
 
@@ -94,7 +94,7 @@ class ScraperFrame(TemplateWindow):
 
         ttk.Label(self.frame.form, text=self.scraper_art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
 
-        texts = ['First USN', 'Last USN', 'Retry time delay (seconds): ', 'Number of retries: ', 'Result page URL (starts with https://): ']
+        texts = ['First USN: ', 'Last USN: ', 'Current semester: ', 'Retry time delay (seconds): ', 'Number of retries: ', 'Result page URL: ']
 
         for i, text in enumerate(texts):
             ttk.Label(self.frame.form, font=('Segoe UI',10), text=text).grid(column=0, row=i+1, sticky='w')
@@ -173,6 +173,7 @@ class ScraperFrame(TemplateWindow):
 
     def open_top_wait(self):
         self.top_wait = Toplevel(self)
+        self.top_wait.update_idletasks()
         self.top_wait.title('Just a moment')
         ttk.Label(self.top_wait, text='Checking your internet connection...').pack(padx=20, pady=5)
         self.top_wait.lift()
@@ -207,7 +208,7 @@ class ScraperFrame(TemplateWindow):
 
         pattern_usn = r'^\d{1}[A-Za-z]{2}\d{2}[A-Za-z]{2}\d{3}$'
 
-        first_usn, last_usn, delay_value, retries_value, url_value = tuple([e.get().strip() for e in self.frame.form.entries])
+        first_usn, last_usn, main_sem, delay_value, retries_value, url_value = tuple([e.get().strip() for e in self.frame.form.entries])
 
         if not (re.match(pattern_usn, first_usn) and re.match(pattern_usn, last_usn)):
             error_list.append('USN Error! Enter valid USN(s)')
@@ -219,21 +220,27 @@ class ScraperFrame(TemplateWindow):
         first_usn = first_usn.upper()
         last_usn = last_usn.upper()
         
+        if not main_sem.isnumeric():
+            error_list.append('Semester Error! Enter a number for the semester.')
+        elif int(main_sem) not in range(1,9):
+            error_list.append('Semester Error! Enter a valid number for the semester.')
+
         if not delay_value.isnumeric():
             error_list.append('Delay Error! Enter a valid number for the delay.')
         if not retries_value.isnumeric():
             error_list.append('Retries Error! Enter a valid number for the number of retries.')
-        if 'https://' not in url_value:
-            error_list.append('URL Error! Please include https:// in the URL.')
+        if not re.match('https://results.vtu.ac.in/[a-zA-Z0-9]+/index.php', url_value):
+            error_list.append('URL Error! Enter correct URL. (starts with https://results.vtu.ac.in/ and ends with index.php)')
 
         if not error_list:
-            message = 'Here are the values that you entered:\n\n'+'\n'.join([f'First USN: {first_usn}', f'Last USN: {last_usn}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
+            message = 'Here are the values that you entered:\n\n'+'\n'.join([f'First USN: {first_usn}', f'Last USN: {last_usn}', f'Current semester: {main_sem}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
             answer = messagebox.askyesno(title='Confirmation', message=message)
 
             if answer:
                 self.usn_begin = first_usn[:-3]
                 self.first_num = int(first_usn[-3:])
                 self.last_num = int(last_usn[-3:])
+                self.main_sem = main_sem
                 self.delay_value = int(delay_value)
                 self.retries_value = int(retries_value)
                 self.url_value = url_value
@@ -282,7 +289,7 @@ class ScraperFrame(TemplateWindow):
 
         self.skipped_usns = []
 
-        self.data_dict = {}
+        self.soup_dict = {}
 
         try:
             conn_support.connect(self.url_value, self.see_process)
@@ -331,7 +338,7 @@ class ScraperFrame(TemplateWindow):
                         else:
                             conn_support.captcha_submit(captcha_text)
                         
-                        self.data_dict = conn_support.get_info(self.data_dict)
+                        self.soup_dict = conn_support.get_info(self.soup_dict)
 
                         self.status_update(f'Data successsfully collected for {usn}\n')
                         cool = 0
@@ -398,14 +405,14 @@ class ScraperFrame(TemplateWindow):
         
         conn_support.driver.quit()
 
-        if bool(self.data_dict):
+        if bool(self.soup_dict):
             if self.skipped_usns:
                 self.status_update(f'These USNs were skipped {self.skipped_usns}.\n')
             else:
                 self.status_update('No USNs were skipped.\n')
 
             dataproc = DataProcessor()
-            dataproc.preprocess(self.data_dict, self.frame.form.is_reval.get())
+            dataproc.preprocess(self.soup_dict, self.frame.form.is_reval.get(), self.main_sem)
 
             messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.first_USN} to {dataproc.last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 
