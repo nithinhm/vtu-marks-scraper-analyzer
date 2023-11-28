@@ -63,27 +63,26 @@ class DataProcessor():
             branch_value = self.first_USN[5:7]
             
             if sem == main_sem:
+                self.main_first_USN = self.first_USN
+                self.main_last_USN = self.last_USN
+
                 if not is_reval:
                     folder_path = f'Regular 20{batch_value} {branch_value} VTU results'
+                    os.makedirs(folder_path, exist_ok=True)
+                    file_path_csv = os.path.join(folder_path, f'Raw Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
                 else:
                     folder_path = f'Reval Regular 20{batch_value} {branch_value} VTU results'
+                    os.makedirs(folder_path, exist_ok=True)
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
+            
             else:
                 if not is_reval:
                     folder_path = f'Arrear 20{batch_value} {branch_value} VTU results'
-                else:
-                    folder_path = f'Reval Arrear 20{batch_value} {branch_value} VTU results'
-
-            os.makedirs(folder_path, exist_ok=True)
-
-            if sem == main_sem:
-                if not is_reval:
-                    file_path_csv = os.path.join(folder_path, f'Raw Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
-                else:
-                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
-            else:
-                if not is_reval:
+                    os.makedirs(folder_path, exist_ok=True)
                     file_path_csv = os.path.join(folder_path, f'Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
                 else:
+                    folder_path = f'Reval Arrear 20{batch_value} {branch_value} VTU results'
+                    os.makedirs(folder_path, exist_ok=True)
                     file_path_csv = os.path.join(folder_path, f'Reval Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
 
             df2.to_csv(file_path_csv)
@@ -228,8 +227,8 @@ class DataProcessor():
             file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
             file_path_excel = os.path.join(folder_path, f'20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
         else:
-            file_path_image = os.path.join(folder_path, f'Reval Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
-            file_path_excel = os.path.join(folder_path, f'Reval 20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
+            file_path_image = os.path.join(folder_path, f'After Reval Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
+            file_path_excel = os.path.join(folder_path, f'After Reval 20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
 
         self.fig.savefig(file_path_image)
 

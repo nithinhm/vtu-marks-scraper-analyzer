@@ -328,12 +328,7 @@ class ScraperFrame(TemplateWindow):
 
                         if len(captcha_text) != 6:
                             self.status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
-                            cool += 1
                             conn_support.driver.refresh()
-                            if cool > 5:
-                                self.status_update('Waiting for a bit to avoid IP block.\n')
-                                cool = 0
-                                conn_support.sleep(2)
                             continue
                         else:
                             conn_support.captcha_submit(captcha_text)
@@ -345,7 +340,7 @@ class ScraperFrame(TemplateWindow):
 
                         self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
 
-                        conn_support.sleep(3)
+                        conn_support.sleep(2)
                         conn_support.driver.back()
 
                         break    
@@ -414,7 +409,7 @@ class ScraperFrame(TemplateWindow):
             dataproc = DataProcessor()
             dataproc.preprocess(self.soup_dict, self.frame.form.is_reval.get(), self.main_sem)
 
-            messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.first_USN} to {dataproc.last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
+            messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.main_first_USN} to {dataproc.main_last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 
         else:
             messagebox.showinfo(title='No Data', message='No data was collected.')
