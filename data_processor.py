@@ -191,7 +191,7 @@ class DataProcessor():
 
         result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
 
-        pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'] + x['Not Eligible'])*100, 2), axis=1)
+        pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/(x['Passed'] + x['Failed'])*100, 2), axis=1)
         result_df['Subject Pass Percentage'] = pass_percentage_column
 
         self.result_df = result_df
