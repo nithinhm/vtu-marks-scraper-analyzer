@@ -52,7 +52,16 @@ pip install -r requirements.txt
 ```
 python "main.py"
 ```
+
+<p align="center">
+    <img src="images\main.png" width="400">
+</p>
+
 5. When the GUI window opens, click on the `Marks Scraper` button. The scraper app will open.
+
+<p align="center">
+    <img src="images\scraper.png" width="400">
+</p>
 
 6. Enter the required information, such as the first USN, last USN, current semester, etc.
 
@@ -63,6 +72,10 @@ python "main.py"
 9. Once the process is complete, you will find the collected marks data in a raw CSV file(s) within the appropriate subfolder(s) in the same directory. (Regular and arrear marks data will be in seperate folders.)
 
 10. If you wish, you can continue to gather data for other branches or simply stop. (You can also gather data in segments for the same branch and use the analyzer app to merge all the segments to create the final analysis report.)
+
+<p align="center">
+    <img src="images\analyzer.png" width="400">
+</p>
 
 11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
