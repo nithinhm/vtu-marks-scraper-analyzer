@@ -51,9 +51,9 @@ class DataProcessor():
         dict_of_sems_dfs = {key:value for key, value in dict_of_sems_dfs.items() if value}
 
         for sem in dict_of_sems_dfs:
-            final_df = pd.concat(dict_of_sems_dfs[sem]).reset_index(drop=True)
+            df2 = pd.concat(dict_of_sems_dfs[sem]).reset_index(drop=True)
 
-            df2 = final_df.apply(pd.to_numeric, errors='ignore')
+            # df2 = final_df.apply(pd.to_numeric, errors='ignore')
 
             collected_usns = list(df2[('USN','')])
 
@@ -121,7 +121,7 @@ class DataProcessor():
         self.branch_value = self.first_USN[5:7]
         self.batch_value = self.first_USN[3:5]
 
-        full_data = full_data.apply(pd.to_numeric, errors='ignore')
+        # full_data = full_data.apply(pd.to_numeric, errors='ignore')
 
         if reval_data:
             full_data.set_index(('USN',''), inplace=True)
@@ -135,7 +135,7 @@ class DataProcessor():
             reval_cols.sort(key = lambda x:re.findall(r'\d+', x[0])[-1])
             full_reval_data = full_reval_data[[('USN',''), ('Student Name','')] + reval_cols]
 
-            full_reval_data = full_reval_data.apply(pd.to_numeric, errors='ignore')
+            # full_reval_data = full_reval_data.apply(pd.to_numeric, errors='ignore')
             full_reval_data.set_index(('USN',''), inplace=True)
 
             sub_cols = list(set([x[0] for x in full_reval_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_data.columns if '(' in x[0]])))
@@ -212,10 +212,10 @@ class DataProcessor():
         else:
             ax.set_title('After Reval Subject-wise Pass Percentages', fontsize='xx-large')
         ax.set_xticks(x, labels, fontsize='x-large')
-        ax.set_yticks(ax.get_yticks(), fontsize='x-large')
+        # ax.set_yticks(ax.get_yticks())
 
         for i,v in enumerate(result_df.index):
-            ax.text(i, pass_percentage_column[i]+2, f"{result_df.loc[v, 'Subject Pass Percentage']}%", ha='center', fontsize='x-large')
+            ax.text(i, pass_percentage_column.iloc[i]+2, f"{result_df.loc[v, 'Subject Pass Percentage']}%", ha='center', fontsize='x-large')
 
         self.fig.tight_layout()
 

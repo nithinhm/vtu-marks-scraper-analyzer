@@ -6,7 +6,7 @@ This app is designed to retrieve student marks data from the VTU (Visvesvaraya T
 
 - **Marks Analyer**: A tool that generates result analysis based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This tool can update the old marks with the new revaluation marks (if any) and provide an updated analysis.
 
-The repository provides both the source code and a pre-compiled executable (GUI) for ease of use.
+The repository provides both the source code and a packaged release for ease of use.
 
 ## Features
 
@@ -23,9 +23,6 @@ Before running the application, ensure that you have the following prerequisites
 
 - Python 3.x
 - Google Chrome
-- Tesseract
-
-Install [Tesseract (for Windows)](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe) in the default directory.
 
 ## Usage
 
@@ -87,11 +84,9 @@ python "main.py"
 
 Please avoid running the scraper on multiple systems simultaneously using the same internet IP address. There's a risk that your IP could be blocked from accessing the specific result link forever due to excessive requests in a short period of time. Although necessary measures are taken in the app to avoid IP block, one must ensure to use the tool responsibly to prevent any disruptions in access.
 
-## Executable
+## Packaged Release
 
-Alternatively, you can download and utilize the pre-compiled executable file available in [this folder](https://drive.google.com/drive/folders/1OrhIpXU_E2krhoOlCQMNalobZo_RIoXX?usp=sharing). The executable, compiled with PyInstaller, eliminates the need for Python installation. However, ensure Tesseract is installed in the default directory.
-
-To run the executable, simply double-click it. A command prompt window may appear briefly; wait for some time. Subsequently, the GUI window will open. Note that closing the command prompt will also close the GUI window, so exercise caution.
+Alternatively, you can download and utilize the packaged version of this project available in the [Releases](Releases) section of this repositary (available on the right-hand side of this website). This version does not require manual installation of Python. More on how to use the packaged version is available in the description of the release.
 
 ## License
 

@@ -10,9 +10,18 @@ from data_processor import DataProcessor
 
 mess = \
 '''
-    Before running the application, ensure that you have installed Tesseract.
 
-    Install Tesseract (for Windows) through this link https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.1.20230401.exe in the default directory.
+    Welcome.
+
+    DO NOT CLOSE THIS TERMINAL WHILE THE APP IS RUNNING!
+
+    If you see a "DevTools listening on..." message, you can ignore it.
+
+    If you see any "Traceback" exception/error messages in this terminal while using the app, please close eveything and restart again.
+
+    For assistance, contact Nithin H M through email: nithinmanju111@gmail.com
+    or go through the GitHub repo https://github.com/nithinhm/vtu-marks-scraper-analyzer
+
 '''
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
