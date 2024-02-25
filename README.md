@@ -86,7 +86,7 @@ Please avoid running the scraper on multiple systems simultaneously using the sa
 
 ## Packaged Release
 
-Alternatively, you can download and utilize the packaged version of this project available in the [Releases](Releases) section of this repositary (available on the right-hand side of this website). This version does not require manual installation of Python. More on how to use the packaged version is available in the description of the release.
+Alternatively, you can download and utilize the packaged version of this project available in the [Releases](https://github.com/nithinhm/vtu-marks-scraper-analyzer/releases) section of this repositary (also available on the right-hand side of this website). This version does not require manual installation of Python. More on how to use the packaged version is available in the description of the release.
 
 ## License
 
