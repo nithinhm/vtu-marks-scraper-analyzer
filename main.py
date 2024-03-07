@@ -17,7 +17,7 @@ mess = \
 
     If you see a "DevTools listening on..." message, you can ignore it.
 
-    If you see any "Traceback" exception/error messages in this terminal while using the app, please close eveything and restart again.
+    If you see any "Traceback" exception/error messages in this terminal while using the app, please close everything and restart again.
 
     For assistance, contact Nithin H M through email: nithinmanju111@gmail.com
     or go through the GitHub repo https://github.com/nithinhm/vtu-marks-scraper-analyzer
@@ -86,7 +86,7 @@ class ScraperFrame(TemplateWindow):
                                                                            /_/                       /_/   /_/       
     '''
 
-    default_entry_values = ['1AM22CS001', '1AM22CS100', '1', '5', '5', 'https://results.vtu.ac.in/JJEcbcs23/index.php']
+    default_entry_values = ['1AM23CS001', '1AM23CS100', '1', '5', '5', 'https://results.vtu.ac.in/DJcbcs24/index.php']
 
     to_abort = None
 
