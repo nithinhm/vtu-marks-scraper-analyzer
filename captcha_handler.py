@@ -1,9 +1,18 @@
 from PIL import Image
 from io import BytesIO
 import pytesseract
+import sys
+import os
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS2
+    except Exception:
+        base_path = os.path.abspath(".")
 
-pytesseract.pytesseract.tesseract_cmd = r"Tesseract-OCR\tesseract.exe"
+    return os.path.join(base_path, relative_path)
+
+pytesseract.pytesseract.tesseract_cmd = resource_path(r"Tesseract-OCR\tesseract.exe")
 
 
 class CaptchaHandler:
