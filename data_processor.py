@@ -155,6 +155,27 @@ class DataProcessor():
 
             full_data.reset_index(inplace=True)
 
+            
+            subs = [x for x in full_reval_data.columns.levels[0] if '(' in x]
+            subs.sort(key = lambda x:re.findall(r'\d+', x)[-1])
+            want = ['Old Result', 'Final Result']
+
+            rev_df = full_reval_data[[(sub, wan) for sub in subs for wan in want]]
+
+            rev_columns = ['Failed and Applied for Reval', 'Changed to Pass After Reval']
+            rev_report = pd.DataFrame(index=subs, columns=rev_columns, dtype=int).fillna(0)
+
+            for subject in subs:
+                for index, row in rev_df[[subject]].iterrows():
+                    if row[(subject, 'Old Result')] == 'F':
+                        rev_report.loc[subject, rev_columns[0]] += 1
+                        if row[(subject, 'Final Result')] == 'P':
+                            rev_report.loc[subject, rev_columns[1]] += 1
+
+            rev_report['Conversion %'] = rev_report.apply(lambda x: round(x.iloc[1]/x.iloc[0]*100, 2), axis=1)
+
+            self.rev_report = rev_report
+
             self.reval = True
 
         full_data.index += 1
@@ -240,6 +261,9 @@ class DataProcessor():
             df.to_excel(xl_writer, startrow=startrow + 1, header=False, **kwargs)
 
         sheet_data = {'Student-wise results':self.full_data, 'Stats of students':self.stats_df, 'Subject-wise results':self.result_df.fillna(0)}
+
+        if self.reval:
+            sheet_data['Revaluation Report'] = self.rev_report
 
         with pd.ExcelWriter(file_path_excel) as writer:
             for name, data in sheet_data.items():
