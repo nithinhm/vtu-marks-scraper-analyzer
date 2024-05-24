@@ -34,7 +34,15 @@ class Connection:
     def get_captcha(self):
         captcha_image = self.driver.find_element(By.XPATH, '//*[@id="raj"]/div[2]/div[2]/img').screenshot_as_png
 
-        return CaptchaHandler().get_captcha_from_image(captcha_image)
+        text = None
+        error = False
+
+        try:
+            text = CaptchaHandler().get_captcha_from_image(captcha_image)
+        except:
+            error = True
+
+        return text, error
     
     def captcha_submit(self, captcha):
         self.driver.find_element(By.NAME, 'captchacode').send_keys(captcha)

@@ -333,10 +333,15 @@ class ScraperFrame(TemplateWindow):
 
                         this_retry = 0
 
-                        captcha_text = conn_support.get_captcha()
+                        captcha_text, error = conn_support.get_captcha()
+
+                        if error:
+                            self.status_update('Error! Tesseract not configured. Retry after configuring.')
+                            self.to_abort = True
+                            break
 
                         if len(captcha_text) != 6:
-                            self.status_update('Tried reading CAPTCHA. The length was invalid. Trying again.\n')
+                            self.status_update('Invalid captcha. Trying again.\n')
                             conn_support.driver.refresh()
                             continue
                         else:
@@ -368,7 +373,7 @@ class ScraperFrame(TemplateWindow):
                             alert.accept()
                             break
                         elif alert_text == '':
-                            self.status_update('\nUnfortunately, this IP address has been blocked due to excessive requests in a short period of time.\nYou will not be able to access this link using this IP address anymore.\nUse an internet connection with a different IP address or set a proxy server in your system settings.\n')
+                            self.status_update('\nUnfortunately, this IP address has been blocked due to excessive requests in a short period of time.\nYou will not be able to access this particular link using this IP address anymore.\nUse an internet connection with a different IP address or set a proxy server in your system settings.\n')
                             self.to_abort = True
                             alert.accept()
                             break
@@ -415,8 +420,15 @@ class ScraperFrame(TemplateWindow):
             else:
                 self.status_update('No USNs were skipped.\n')
 
+            messagebox.showinfo(title='Select folder', message='Select a folder in which to save the downloaded files.')
+            fp_given = False
+            while not fp_given:
+                root_folder = fd.askdirectory(title='Select folder')
+                if root_folder:
+                    fp_given = True
+
             dataproc = DataProcessor()
-            dataproc.preprocess(self.soup_dict, self.frame.form.is_reval.get(), self.main_sem)
+            dataproc.preprocess(self.soup_dict, self.frame.form.is_reval.get(), self.main_sem, self.usn_begin, root_folder)
 
             messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.main_first_USN} to {dataproc.main_last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 

@@ -9,7 +9,7 @@ import re
 matplotlib.use('agg')
 
 class DataProcessor():
-    def preprocess(self, soup_dict, is_reval, main_sem):
+    def preprocess(self, soup_dict, is_reval, main_sem, usn_begin, root_folder):
 
         dict_of_sems_dfs = {f'{sem}':[] for sem in range(8,0,-1)}
 
@@ -50,42 +50,45 @@ class DataProcessor():
 
         dict_of_sems_dfs = {key:value for key, value in dict_of_sems_dfs.items() if value}
 
+        batch_value = usn_begin[3:5]
+        branch_value = usn_begin[-2:]
+        
+        folder_path = os.path.join(root_folder, f'Regular {batch_value} batch semester {main_sem} {branch_value} VTU results')
+        os.makedirs(folder_path, exist_ok=True)
+
+        subs_for_creds = []
+
         for sem in dict_of_sems_dfs:
             df2 = pd.concat(dict_of_sems_dfs[sem]).reset_index(drop=True)
 
             # df2 = final_df.apply(pd.to_numeric, errors='ignore')
+            s = [x for x in df2.columns.levels[0] if '(' in x]
+            s.sort(key = lambda x: re.findall(r'\d+', x)[-1])
+            subs_for_creds.extend(s)
 
-            collected_usns = list(df2[('USN','')])
+            collected_usns = df2[('USN','')].to_list()
 
             self.first_USN, self.last_USN = collected_usns[0], collected_usns[-1]
 
-            batch_value = self.first_USN[3:5]
-            branch_value = self.first_USN[5:7]
-            
             if sem == main_sem:
                 self.main_first_USN = self.first_USN
                 self.main_last_USN = self.last_USN
 
                 if not is_reval:
-                    folder_path = f'Regular 20{batch_value} {branch_value} VTU results'
-                    os.makedirs(folder_path, exist_ok=True)
-                    file_path_csv = os.path.join(folder_path, f'Raw Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Regular semester {sem} {self.first_USN} to {self.last_USN}.csv')
                 else:
-                    folder_path = f'Reval Regular 20{batch_value} {branch_value} VTU results'
-                    os.makedirs(folder_path, exist_ok=True)
-                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
-            
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular semester {sem} {self.first_USN} to {self.last_USN}.csv')
             else:
                 if not is_reval:
-                    folder_path = f'Arrear 20{batch_value} {branch_value} VTU results'
-                    os.makedirs(folder_path, exist_ok=True)
-                    file_path_csv = os.path.join(folder_path, f'Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Arrear semester {sem} {self.first_USN} to {self.last_USN}.csv')
                 else:
-                    folder_path = f'Reval Arrear 20{batch_value} {branch_value} VTU results'
-                    os.makedirs(folder_path, exist_ok=True)
-                    file_path_csv = os.path.join(folder_path, f'Reval Arrear {branch_value} semester {sem} {self.first_USN} to {self.last_USN}.csv')
-
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Arrear semester {sem} {self.first_USN} to {self.last_USN}.csv')
+            
             df2.to_csv(file_path_csv)
+
+        credf = pd.Series(index=subs_for_creds, name='credits')
+        file_path_credit_csv = os.path.join(folder_path, f'Credit info {branch_value}.csv')
+        credf.to_csv(file_path_credit_csv)
     
     def analyze_data(self, filepaths):
         self.no_data = None
@@ -95,14 +98,22 @@ class DataProcessor():
 
         list_of_data = []
         reval_data = []
+        credits_data = []
+        arrear_data = []
 
         for filepath in filepaths:
-            data = pd.read_csv(filepath, header=[0,1])
-            if 'Reval' in filepath:
-                reval_data.append(data)
+            if 'Credit' not in filepath:
+                data = pd.read_csv(filepath, header=[0,1])
+                if 'Reval' in filepath:
+                    reval_data.append(data)
+                elif 'Arrear' in filepath:
+                    arrear_data.append(data)
+                else:
+                    list_of_data.append(data)
             else:
-                list_of_data.append(data)
-
+                data = pd.read_csv(filepath)
+                credits_data.append(data)
+        
         if not list_of_data:
             self.no_data = True
             return
@@ -112,16 +123,9 @@ class DataProcessor():
         full_data.drop(full_data.columns[0], axis=1, inplace=True)
         full_data.rename(columns={name:'' for name in full_data.columns.levels[1] if 'level' in name}, inplace=True)
 
-        cols = list(full_data.columns)[2:]
+        cols = full_data.columns.to_list()[2:]
         cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
         full_data = full_data[[('USN',''), ('Student Name','')] + cols]
-
-        USNs = list(full_data['USN'])
-        self.first_USN, self.last_USN = USNs[0], USNs[-1]
-        self.branch_value = self.first_USN[5:7]
-        self.batch_value = self.first_USN[3:5]
-
-        # full_data = full_data.apply(pd.to_numeric, errors='ignore')
 
         if reval_data:
             full_data.set_index(('USN',''), inplace=True)
@@ -131,33 +135,25 @@ class DataProcessor():
             full_reval_data.drop(full_reval_data.columns[0], axis=1, inplace=True)
             full_reval_data.rename(columns={name:'' for name in full_reval_data.columns.levels[1] if 'level' in name}, inplace=True)
 
-            reval_cols = list(full_reval_data.columns)[2:]
+            reval_cols = full_reval_data.columns.to_list()[2:]
             reval_cols.sort(key = lambda x:re.findall(r'\d+', x[0])[-1])
             full_reval_data = full_reval_data[[('USN',''), ('Student Name','')] + reval_cols]
 
-            # full_reval_data = full_reval_data.apply(pd.to_numeric, errors='ignore')
             full_reval_data.set_index(('USN',''), inplace=True)
 
             sub_cols = list(set([x[0] for x in full_reval_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_data.columns if '(' in x[0]])))
 
-            # Iterate over the rows of the second dataframe
             for index, row in full_reval_data.iterrows():
-                # Iterate over the columns (subjects) of the second dataframe
                 for subject in sub_cols:
-                    # Check if the student has applied for revaluation in this subject
                     if not pd.isna(row[(subject, 'Final Marks')]):
-                        # Update the marks in the first dataframe
                         full_data.loc[index, (subject, 'External Marks')] = row[(subject, 'Final Marks')]
-                        # Update the result in the first dataframe
                         full_data.loc[index, (subject, 'Result')] = row[(subject, 'Final Result')]
-                        # update the total marks in the first dataframe
                         full_data.loc[index, (subject, 'Total')] = int(full_data.loc[index, (subject, 'Internal Marks')]) + int(full_data.loc[index, (subject, 'External Marks')])
 
             full_data.reset_index(inplace=True)
 
-            
             subs = [x for x in full_reval_data.columns.levels[0] if '(' in x]
-            subs.sort(key = lambda x:re.findall(r'\d+', x)[-1])
+            subs.sort(key = lambda x: re.findall(r'\d+', x)[-1])
             want = ['Old Result', 'Final Result']
 
             rev_df = full_reval_data[[(sub, wan) for sub in subs for wan in want]]
@@ -174,14 +170,93 @@ class DataProcessor():
 
             rev_report['Conversion %'] = rev_report.apply(lambda x: round(x.iloc[1]/x.iloc[0]*100, 2), axis=1)
 
-            self.rev_report = rev_report
-
-            self.reval = True
-
         full_data.index += 1
 
         if (full_data == 'P *').any().any():
             full_data.replace('P *', 'P', inplace=True)
+
+        if arrear_data:
+            full_arrear_data = pd.concat(arrear_data).reset_index(drop=True)
+            full_arrear_data = full_arrear_data.drop_duplicates().reset_index(drop=True)
+            full_arrear_data.drop(full_arrear_data.columns[0], axis=1, inplace=True)
+            full_arrear_data.rename(columns={name:'' for name in full_arrear_data.columns.levels[1] if 'level' in name}, inplace=True)
+
+            arrear_cols = full_arrear_data.columns.to_list()[2:]
+            arrear_cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
+            full_arrear_data = full_arrear_data[[('USN',''), ('Student Name','')] + arrear_cols]
+
+        if credits_data:
+            full_credits_data = pd.concat(credits_data).reset_index(drop=True)
+            full_credits_data = full_credits_data.drop_duplicates(subset=full_credits_data.columns[0]).set_index(full_credits_data.columns[0])
+
+            if (not full_credits_data.isna().any().iloc[0]) and (full_credits_data.dtypes.iloc[0] == 'int64'):
+
+                def to_grade(score):
+                    grade = None
+
+                    if isinstance(score, str):
+                        return score
+
+                    if score >= 90:
+                        grade = 10
+                    elif score >= 80:
+                        grade = 9
+                    elif score >= 70:
+                        grade = 8
+                    elif score >= 60:
+                        grade = 7
+                    elif score >= 55:
+                        grade = 6
+                    elif score >= 50:
+                        grade = 5
+                    elif score >= 40:
+                        grade = 4
+                    else:
+                        grade = 0
+                    
+                    return grade
+                
+                
+                full_credits_data = full_credits_data.T
+
+                new = pd.merge(full_data, full_arrear_data, how='outer')
+
+                subjs = [x[0] for i, x in enumerate(new.columns) if '(' in x[0] and i%4==0]
+
+                for sub in subjs:
+                    new[(sub, 'Grade Point')] = pd.Series(dtype=int)
+                    new[(sub, 'Max Credits')] = pd.Series(dtype=int)
+
+                wants = ['Result', 'Total', 'Grade Point', 'Max Credits']
+
+                colms = [(sub, wan) for sub in subjs for wan in wants]
+
+                sgpa_report = new[[('USN',''), ('Student Name','')] + colms]
+                
+                sgpa_report[('SGPA', '')] = pd.Series(dtype=float)
+
+                for i, row in sgpa_report.iterrows():
+                    num = 0
+                    den = 0
+                    for sub in subjs:
+                        if not pd.isna(row[(sub, 'Result')]):
+                            c = full_credits_data.loc['credits', sub]
+                            sgpa_report.loc[i, (sub, 'Max Credits')] = c                  
+                            
+                            if row[(sub, 'Result')] == 'P':
+                                gp = to_grade(row[(sub, 'Total')])
+                            else:
+                                gp = 0
+                            
+                            sgpa_report.loc[i, (sub, 'Grade Point')] = gp
+
+                            num += gp*c
+                            den += c
+
+                    sgpa_report.loc[i, ('SGPA', '')] = round(num/den, 2)
+                
+                sgpa_report = sgpa_report.convert_dtypes()
+                sgpa_report.index += 1
 
         overall_column = full_data[full_data.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
         temp_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
@@ -242,16 +317,21 @@ class DataProcessor():
 
         full_data['Overall Total'] = overall_column
 
+        self.f_usn, self.l_usn = full_data[('USN', '')].iloc[0], full_data[('USN', '')].iloc[-1]
+
+        self.batch_value = self.f_usn[3:5]
+        self.branch_value = self.l_usn[5:7]
+       
         self.full_data = full_data
 
 
     def save_data(self, folder_path):
         if not self.reval:
-            file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
-            file_path_excel = os.path.join(folder_path, f'20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
+            file_path_image = os.path.join(folder_path, f'Subject-wise Pass Percentages of {self.batch_value} batch {self.branch_value} branch students.jpg')
+            file_path_excel = os.path.join(folder_path, f'{self.f_usn} to {self.l_usn} VTU results and analysis.xlsx')
         else:
-            file_path_image = os.path.join(folder_path, f'After Reval Subject-wise Pass Percentages of 20{self.batch_value} {self.branch_value} branch students.jpg')
-            file_path_excel = os.path.join(folder_path, f'After Reval 20{self.batch_value} {self.branch_value} {self.first_USN} to {self.last_USN} VTU results and analysis.xlsx')
+            file_path_image = os.path.join(folder_path, f'After Reval Subject-wise Pass Percentages of {self.batch_value} batch {self.branch_value} branch students.jpg')
+            file_path_excel = os.path.join(folder_path, f'After Reval {self.f_usn} to {self.l_usn} VTU results and analysis.xlsx')
 
         self.fig.savefig(file_path_image)
 
@@ -264,6 +344,9 @@ class DataProcessor():
 
         if self.reval:
             sheet_data['Revaluation Report'] = self.rev_report
+        
+        if self.sgpa:
+            sheet_data['SGPA Report'] = self.sgpa_report
 
         with pd.ExcelWriter(file_path_excel) as writer:
             for name, data in sheet_data.items():
