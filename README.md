@@ -66,7 +66,7 @@ python "main.py"
 
 8. Next, sit back and relax while the tool collects the marks data for the specified students. (You could also abort the collection process by clicking "Abort." Data collected till that point, if any, will be saved.)
 
-9. Once the process is complete, you will find the collected marks data in a raw CSV file(s) within the appropriate subfolder(s) in the same directory. (Regular and arrear marks data will be in seperate folders.)
+9. Once the process is complete, you will be asked to select a folder in which to save the collected marks data. Once the folder is selected, the data will be saved in it as a raw CSV file(s) within the appropriate subfolder(s) (regular and arrear marks data will be in seperate folders). Make sure to not change the names of the downloaded files.
 
 10. If you wish, you can continue to gather data for other branches or simply stop. (You can also gather data in segments for the same branch and use the analyzer app to merge all the segments to create the final analysis report.)
 
@@ -76,7 +76,7 @@ python "main.py"
 
 11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
-12. Select "Browse" and choose the saved raw CSV files that hold the marks data of regular marks only. If you've used the scraper to gather revaluation marks, you can include those files here along with the original CSV containing the old marks.
+12. Select "Browse" and choose the saved raw CSV files that hold the marks data of regular marks, arrear marks, and revaluation marks (if any). Selecting files containing regular marks is compulsory.
 
 13. Click on "Analyze" and do as instructed. This will generate an Excel file with the marks and their analysis (check the different sheets in the Excel workbook) in the selected folder.
 
@@ -86,7 +86,7 @@ Please avoid running the scraper on multiple systems simultaneously using the sa
 
 ## Packaged Release
 
-Alternatively, you can download and utilize the packaged version of this project available in the [Releases](https://github.com/nithinhm/vtu-marks-scraper-analyzer/releases) section of this repositary (also available on the right-hand side of this website). This version does not require manual installation of Python. More on how to use the packaged version is available in the description of the release.
+Alternatively, you can download and utilize the packaged version of this project available in the [Releases](https://github.com/nithinhm/vtu-marks-scraper-analyzer/releases) section of this repositary. This package does not require manual installation of Python. More on how to use the packaged version is available in the description of the release.
 
 ## License
 

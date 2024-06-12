@@ -15,7 +15,7 @@ class DataProcessor():
 
         for id, soup in soup_dict.items():
 
-            this_usn, this_name = tuple(id.split('+'))
+            this_usn, this_name = id.split('+')
             sems_divs = soup.find_all('div', style="text-align:center;padding:5px;")
             sems_num = [x.text.split(':')[-1].strip() for x in sems_divs]
             sems_data = [sem_div.find_next_sibling('div') for sem_div in sems_divs]
@@ -53,7 +53,7 @@ class DataProcessor():
         batch_value = usn_begin[3:5]
         branch_value = usn_begin[-2:]
         
-        folder_path = os.path.join(root_folder, f'Regular {batch_value} batch semester {main_sem} {branch_value} VTU results')
+        folder_path = os.path.join(root_folder, f'{batch_value} batch semester {main_sem} {branch_value} VTU results')
         os.makedirs(folder_path, exist_ok=True)
 
         subs_for_creds = []
@@ -68,57 +68,62 @@ class DataProcessor():
 
             collected_usns = df2[('USN','')].to_list()
 
-            self.first_USN, self.last_USN = collected_usns[0], collected_usns[-1]
+            first_USN, last_USN = collected_usns[0], collected_usns[-1]
 
             if sem == main_sem:
-                self.main_first_USN = self.first_USN
-                self.main_last_USN = self.last_USN
+                self.main_first_USN = first_USN
+                self.main_last_USN = last_USN
 
                 if not is_reval:
-                    file_path_csv = os.path.join(folder_path, f'Raw Regular semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Regular semester {sem} {first_USN} to {last_USN}.csv')
                 else:
-                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Regular semester {sem} {first_USN} to {last_USN}.csv')
             else:
                 if not is_reval:
-                    file_path_csv = os.path.join(folder_path, f'Raw Arrear semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Arrear semester {sem} {first_USN} to {last_USN}.csv')
                 else:
-                    file_path_csv = os.path.join(folder_path, f'Raw Reval Arrear semester {sem} {self.first_USN} to {self.last_USN}.csv')
+                    file_path_csv = os.path.join(folder_path, f'Raw Reval Arrear semester {sem} {first_USN} to {last_USN}.csv')
             
             df2.to_csv(file_path_csv)
 
-        credf = pd.Series(index=subs_for_creds, name='credits')
-        file_path_credit_csv = os.path.join(folder_path, f'Credit info {branch_value}.csv')
-        credf.to_csv(file_path_credit_csv)
+        if not is_reval:
+            credf = pd.Series(index=subs_for_creds, name='credits')
+            file_path_credit_csv = os.path.join(folder_path, f'Credit info {branch_value}.csv')
+            credf.to_csv(file_path_credit_csv)
     
     def analyze_data(self, filepaths):
         self.no_data = None
+        self.sgpa = None
         self.reval = None
 
         filepaths.sort(key = lambda x: x.split('/')[-1])
 
-        list_of_data = []
-        reval_data = []
-        credits_data = []
+        regular_data = []
         arrear_data = []
+        reval_regular_data = []
+        reval_arrear_data = []
+        credits_data = []
 
         for filepath in filepaths:
             if 'Credit' not in filepath:
                 data = pd.read_csv(filepath, header=[0,1])
-                if 'Reval' in filepath:
-                    reval_data.append(data)
-                elif 'Arrear' in filepath:
+                if 'Raw Regular' in filepath:
+                    regular_data.append(data)
+                elif 'Raw Arrear' in filepath:
                     arrear_data.append(data)
-                else:
-                    list_of_data.append(data)
+                elif 'Raw Reval Regular' in filepath:
+                    reval_regular_data.append(data)
+                elif 'Raw Reval Arrear' in filepath:
+                    reval_arrear_data.append(data)
             else:
                 data = pd.read_csv(filepath)
                 credits_data.append(data)
         
-        if not list_of_data:
+        if not regular_data:
             self.no_data = True
             return
 
-        full_data = pd.concat(list_of_data).reset_index(drop=True)
+        full_data = pd.concat(regular_data).reset_index(drop=True)
         full_data = full_data.drop_duplicates(subset=full_data.columns[1]).reset_index(drop=True)
         full_data.drop(full_data.columns[0], axis=1, inplace=True)
         full_data.rename(columns={name:'' for name in full_data.columns.levels[1] if 'level' in name}, inplace=True)
@@ -127,23 +132,23 @@ class DataProcessor():
         cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
         full_data = full_data[[('USN',''), ('Student Name','')] + cols]
 
-        if reval_data:
+        if reval_regular_data:
             full_data.set_index(('USN',''), inplace=True)
 
-            full_reval_data = pd.concat(reval_data).reset_index(drop=True)
-            full_reval_data = full_reval_data.drop_duplicates(subset=full_reval_data.columns[1]).reset_index(drop=True)
-            full_reval_data.drop(full_reval_data.columns[0], axis=1, inplace=True)
-            full_reval_data.rename(columns={name:'' for name in full_reval_data.columns.levels[1] if 'level' in name}, inplace=True)
+            full_reval_regular_data = pd.concat(reval_regular_data).reset_index(drop=True)
+            full_reval_regular_data = full_reval_regular_data.drop_duplicates(subset=full_reval_regular_data.columns[1]).reset_index(drop=True)
+            full_reval_regular_data.drop(full_reval_regular_data.columns[0], axis=1, inplace=True)
+            full_reval_regular_data.rename(columns={name:'' for name in full_reval_regular_data.columns.levels[1] if 'level' in name}, inplace=True)
 
-            reval_cols = full_reval_data.columns.to_list()[2:]
+            reval_cols = full_reval_regular_data.columns.to_list()[2:]
             reval_cols.sort(key = lambda x:re.findall(r'\d+', x[0])[-1])
-            full_reval_data = full_reval_data[[('USN',''), ('Student Name','')] + reval_cols]
+            full_reval_regular_data = full_reval_regular_data[[('USN',''), ('Student Name','')] + reval_cols]
 
-            full_reval_data.set_index(('USN',''), inplace=True)
+            full_reval_regular_data.set_index(('USN',''), inplace=True)
 
-            sub_cols = list(set([x[0] for x in full_reval_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_data.columns if '(' in x[0]])))
+            sub_cols = list(set([x[0] for x in full_reval_regular_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_data.columns if '(' in x[0]])))
 
-            for index, row in full_reval_data.iterrows():
+            for index, row in full_reval_regular_data.iterrows():
                 for subject in sub_cols:
                     if not pd.isna(row[(subject, 'Final Marks')]):
                         full_data.loc[index, (subject, 'External Marks')] = row[(subject, 'Final Marks')]
@@ -152,11 +157,11 @@ class DataProcessor():
 
             full_data.reset_index(inplace=True)
 
-            subs = [x for x in full_reval_data.columns.levels[0] if '(' in x]
+            subs = [x for x in full_reval_regular_data.columns.levels[0] if '(' in x]
             subs.sort(key = lambda x: re.findall(r'\d+', x)[-1])
             want = ['Old Result', 'Final Result']
 
-            rev_df = full_reval_data[[(sub, wan) for sub in subs for wan in want]]
+            rev_df = full_reval_regular_data[[(sub, wan) for sub in subs for wan in want]]
 
             rev_columns = ['Failed and Applied for Reval', 'Changed to Pass After Reval']
             rev_report = pd.DataFrame(index=subs, columns=rev_columns, dtype=int).fillna(0)
@@ -169,6 +174,8 @@ class DataProcessor():
                             rev_report.loc[subject, rev_columns[1]] += 1
 
             rev_report['Conversion %'] = rev_report.apply(lambda x: round(x.iloc[1]/x.iloc[0]*100, 2), axis=1)
+            self.rev_report = rev_report
+            self.reval = True
 
         full_data.index += 1
 
@@ -176,14 +183,64 @@ class DataProcessor():
             full_data.replace('P *', 'P', inplace=True)
 
         if arrear_data:
-            full_arrear_data = pd.concat(arrear_data).reset_index(drop=True)
-            full_arrear_data = full_arrear_data.drop_duplicates().reset_index(drop=True)
-            full_arrear_data.drop(full_arrear_data.columns[0], axis=1, inplace=True)
-            full_arrear_data.rename(columns={name:'' for name in full_arrear_data.columns.levels[1] if 'level' in name}, inplace=True)
+            # full_arrear_data = pd.concat(arrear_data).reset_index(drop=True)
+            for x in arrear_data:
+                x.drop(x.columns[0], axis=1, inplace=True)
+                x.rename(columns={name:'' for name in x.columns.levels[1] if 'level' in name}, inplace=True)
+                s = x.columns.to_list()[2:]
+                s.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
+                x = x[[('USN',''), ('Student Name','')] + s]
 
-            arrear_cols = full_arrear_data.columns.to_list()[2:]
-            arrear_cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
-            full_arrear_data = full_arrear_data[[('USN',''), ('Student Name','')] + arrear_cols]
+            if len(arrear_data) > 1:
+                full_arrear_data = pd.merge(arrear_data[-1], arrear_data[-2], how='outer')
+                for i in range(2, len(arrear_data)):
+                    full_arrear_data = pd.merge(full_arrear_data, arrear_data[-i-1], how='outer')
+            else:
+                full_arrear_data = arrear_data[0]
+
+            full_arrear_data = full_arrear_data.drop_duplicates().reset_index(drop=True)
+
+            # arrear_cols = full_arrear_data.columns.to_list()[2:]
+            # arrear_cols.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
+            # full_arrear_data = full_arrear_data[[('USN',''), ('Student Name','')] + arrear_cols]
+
+            if reval_arrear_data:
+                full_arrear_data.set_index(('USN',''), inplace=True)
+
+                # full_reval_arrear_data = pd.concat(reval_arrear_data).reset_index(drop=True)
+                for x in reval_arrear_data:
+                    x.drop(x.columns[0], axis=1, inplace=True)
+                    x.rename(columns={name:'' for name in x.columns.levels[1] if 'level' in name}, inplace=True)
+                    s = x.columns.to_list()[2:]
+                    s.sort(key = lambda x: re.findall(r'\d+', x[0])[-1])
+                    x = x[[('USN',''), ('Student Name','')] + s]
+
+                # full_reval_arrear_data = pd.concat(reval_arrear_data).reset_index(drop=True)
+                if len(reval_arrear_data) > 1:
+                    full_reval_arrear_data = pd.merge(reval_arrear_data[-1], reval_arrear_data[-2], how='outer')
+                    for i in range(2, len(reval_arrear_data)):
+                        full_reval_arrear_data = pd.merge(full_reval_arrear_data, reval_arrear_data[-i-1], how='outer')
+                else:
+                    full_reval_arrear_data = reval_arrear_data[0]
+
+                full_reval_arrear_data = full_reval_arrear_data.drop_duplicates().reset_index(drop=True)
+
+                # reval_arrear_cols = full_reval_arrear_data.columns.to_list()[2:]
+                # reval_arrear_cols.sort(key = lambda x:re.findall(r'\d+', x[0])[-1])
+                # full_reval_arrear_data = full_reval_arrear_data[[('USN',''), ('Student Name','')] + reval_arrear_cols]
+
+                full_reval_arrear_data.set_index(('USN',''), inplace=True)
+
+                sub_cols = list(set([x[0] for x in full_reval_arrear_data.columns if '(' in x[0]]).intersection(set([x[0] for x in full_arrear_data.columns if '(' in x[0]])))
+
+                for index, row in full_reval_arrear_data.iterrows():
+                    for subject in sub_cols:
+                        if not pd.isna(row[(subject, 'Final Marks')]):
+                            full_arrear_data.loc[index, (subject, 'External Marks')] = row[(subject, 'Final Marks')]
+                            full_arrear_data.loc[index, (subject, 'Result')] = row[(subject, 'Final Result')]
+                            full_arrear_data.loc[index, (subject, 'Total')] = int(full_arrear_data.loc[index, (subject, 'Internal Marks')]) + int(full_arrear_data.loc[index, (subject, 'External Marks')])
+
+                full_arrear_data.reset_index(inplace=True)
 
         if credits_data:
             full_credits_data = pd.concat(credits_data).reset_index(drop=True)
@@ -257,6 +314,8 @@ class DataProcessor():
                 
                 sgpa_report = sgpa_report.convert_dtypes()
                 sgpa_report.index += 1
+                self.sgpa = True
+                self.sgpa_report = sgpa_report
 
         overall_column = full_data[full_data.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
         temp_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)

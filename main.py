@@ -86,7 +86,7 @@ class ScraperFrame(TemplateWindow):
                                                                            /_/                       /_/   /_/       
     '''
 
-    default_entry_values = ['1AM23CS001', '1AM23CS100', '1', '5', '5', 'https://results.vtu.ac.in/DJcbcs24/index.php']
+    default_entry_values = ['1AM23CS', '1-100', '1', '5', '5', 'https://results.vtu.ac.in/DJcbcs24/index.php']
 
     to_abort = None
 
@@ -103,7 +103,7 @@ class ScraperFrame(TemplateWindow):
 
         ttk.Label(self.frame.form, text=self.scraper_art, font=('Courier', 7)).grid(column=0, row=0, columnspan=2)
 
-        texts = ['First USN: ', 'Last USN: ', 'Current semester: ', 'Retry time delay (seconds): ', 'Number of retries: ', 'Result page URL: ']
+        texts = ['USN - First 7 characters: ', 'USN - Last 3 characters sequence (1,2,3 or 1-3 or 1,2-3): ', 'Regular semester of this exam: ', 'Retry time delay (seconds): ', 'Number of retries: ', 'Result page URL: ']
 
         for i, text in enumerate(texts):
             ttk.Label(self.frame.form, font=('Segoe UI',10), text=text).grid(column=0, row=i+1, sticky='w')
@@ -215,19 +215,33 @@ class ScraperFrame(TemplateWindow):
     def verify_for_error(self):
         error_list = []
 
-        pattern_usn = r'^\d{1}[A-Za-z]{2}\d{2}[A-Za-z]{2}\d{3}$'
+        def parse_num(s: str):
 
-        first_usn, last_usn, main_sem, delay_value, retries_value, url_value = tuple([e.get().strip() for e in self.frame.form.entries])
+            def parser(part):
+                if '-' in part:
+                    start, end = map(int, part.split('-'))
+                    if start > end:
+                        start, end = end, start
+                    return range(start, end+1)
+                else:
+                    return [int(part)]
 
-        if not (re.match(pattern_usn, first_usn) and re.match(pattern_usn, last_usn)):
-            error_list.append('USN Error! Enter valid USN(s)')
-        elif first_usn[:-3] != last_usn[:-3]:
-            error_list.append('USN Error! First and last USNs need to match (except for last three characters)')
-        elif int(first_usn[-3:]) > int(last_usn[-3:]):
-            error_list.append('USN Error! First USN has to be less than last USN')
+            seq = []
+            com_split = s.split(',')
+            for part in com_split:
+                seq.extend(parser(part))
 
-        first_usn = first_usn.upper()
-        last_usn = last_usn.upper()
+            return list(set(seq))
+
+        first_seven, last_three, main_sem, delay_value, retries_value, url_value = [e.get().strip() for e in self.frame.form.entries]
+
+        if not re.match(r'^\d{1}[A-Za-z]{2}\d{2}[A-Za-z]{2}$', first_seven):
+            error_list.append('USN Error! Enter USN with valid first 7 characters.')
+
+        first_seven = first_seven.upper()
+
+        if not re.match(r'^\d{1,3}([-,]\d{1,3})*$', last_three):
+            error_list.append('Error! Enter the numbers in the proper format, without spaces.')
         
         if not main_sem.isnumeric():
             error_list.append('Semester Error! Enter a number for the semester.')
@@ -242,13 +256,14 @@ class ScraperFrame(TemplateWindow):
             error_list.append('URL Error! Enter correct URL. (starts with https://results.vtu.ac.in/ and ends with index.php)')
 
         if not error_list:
-            message = 'Here are the values that you entered:\n\n'+'\n'.join([f'First USN: {first_usn}', f'Last USN: {last_usn}', f'Current semester: {main_sem}', f'Delay: {delay_value}', f'Retries: {retries_value}', f'URL: {url_value}'])+'\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
+            message = 'Verified!\n\nWould you like to proceed?\n\nIf you wish to make some changes, press No.'
             answer = messagebox.askyesno(title='Confirmation', message=message)
 
             if answer:
-                self.usn_begin = first_usn[:-3]
-                self.first_num = int(first_usn[-3:])
-                self.last_num = int(last_usn[-3:])
+                self.usn_begin = first_seven
+                # self.first_num = int(first_seven[-3:])
+                # self.last_num = int(last_three[-3:])
+                self.usn_seq = parse_num(last_three)
                 self.main_sem = main_sem
                 self.delay_value = int(delay_value)
                 self.retries_value = int(retries_value)
@@ -314,12 +329,13 @@ class ScraperFrame(TemplateWindow):
             self.frame.status.textbox.delete('1.0', 'end')
             self.frame.status.textbox.config(state='disabled')
 
-        k = self.first_num - 1
+        # k = self.first_num - 1
 
-        cool = 0
+        cool_counter = 0
+        total_usns = len(self.usn_seq)
 
-        while k < self.last_num:
-            k += 1
+        for i, k in enumerate(self.usn_seq):
+            # k += 1
             this_retry = 0
 
             try:
@@ -339,8 +355,7 @@ class ScraperFrame(TemplateWindow):
                             self.status_update('Error! Tesseract not configured. Retry after configuring.')
                             self.to_abort = True
                             break
-
-                        if len(captcha_text) != 6:
+                        elif len(captcha_text) != 6:
                             self.status_update('Invalid captcha. Trying again.\n')
                             conn_support.driver.refresh()
                             continue
@@ -350,9 +365,9 @@ class ScraperFrame(TemplateWindow):
                         self.soup_dict = conn_support.get_info(self.soup_dict)
 
                         self.status_update(f'Data successsfully collected for {usn}\n')
-                        cool = 0
+                        cool_counter = 0
 
-                        self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
+                        self.frame.status.progress.config(value=(i + 1)/total_usns*100)
 
                         conn_support.sleep(2)
                         conn_support.driver.back()
@@ -366,9 +381,9 @@ class ScraperFrame(TemplateWindow):
                         self.status_update(f'Error for {usn} because {alert_text}')
 
                         if alert_text == 'University Seat Number is not available or Invalid..!' or alert_text == 'You have not applied for reval or reval results are awaited !!!':
-                            cool += 1
+                            cool_counter += 1
                             self.status_update('Moving to the next USN.\n')
-                            self.frame.status.progress.config(value=(k - self.first_num + 1)/(self.last_num - self.first_num + 1)*100)
+                            self.frame.status.progress.config(value=(i + 1)/(total_usns)*100)
                             self.skipped_usns.append(usn)
                             alert.accept()
                             break
@@ -378,7 +393,7 @@ class ScraperFrame(TemplateWindow):
                             alert.accept()
                             break
                         else:
-                            cool += 1
+                            cool_counter += 1
                             self.status_update('Trying again.\n')
                             alert.accept()                    
 
@@ -394,10 +409,10 @@ class ScraperFrame(TemplateWindow):
                             conn_support.sleep(self.delay_value)
                             conn_support.driver.refresh()
 
-                    if cool > 5:
+                    if cool_counter > 5:
                         self.status_update('Waiting for a bit to avoid IP block.\n')
-                        cool = 0
-                        conn_support.sleep(2)
+                        cool_counter = 0
+                        conn_support.sleep(3)
 
                 else:
                     if self.to_abort:
@@ -430,7 +445,7 @@ class ScraperFrame(TemplateWindow):
             dataproc = DataProcessor()
             dataproc.preprocess(self.soup_dict, self.frame.form.is_reval.get(), self.main_sem, self.usn_begin, root_folder)
 
-            messagebox.showinfo(title='Success', message=f'Data collected for USNs {dataproc.main_first_USN} to {dataproc.main_last_USN} and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
+            messagebox.showinfo(title='Success', message=f'Data collected and saved in a csv file.\n\nYou can continue to collect data of other students.\n\nOr you can close the scraper window to return to the main interface.')
 
         else:
             messagebox.showinfo(title='No Data', message='No data was collected.')
