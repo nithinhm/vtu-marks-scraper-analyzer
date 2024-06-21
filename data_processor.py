@@ -276,7 +276,7 @@ class DataProcessor():
                 
                 full_credits_data = full_credits_data.T
 
-                new = pd.merge(full_data, full_arrear_data, how='outer')
+                new = pd.merge(full_data, full_arrear_data, how='outer') if arrear_data else full_data.copy()
 
                 subjs = [x[0] for i, x in enumerate(new.columns) if '(' in x[0] and i%4==0]
 
@@ -313,7 +313,8 @@ class DataProcessor():
                     sgpa_report.loc[i, ('SGPA', '')] = round(num/den, 2)
                 
                 sgpa_report = sgpa_report.convert_dtypes()
-                sgpa_report.index += 1
+                if arrear_data:
+                    sgpa_report.index += 1
                 self.sgpa = True
                 self.sgpa_report = sgpa_report
 

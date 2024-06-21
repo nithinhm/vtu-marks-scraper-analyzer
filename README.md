@@ -4,16 +4,17 @@ This app is designed to retrieve student marks data from the VTU (Visvesvaraya T
 
 - **Marks Scraper**: An automated tool that retrieves student marks data from the VTU website and stores it in a CSV file. Regular and arrear results will be stored in seperate files. Depending on the URL link that is entered in the scraper, the tool will decide whether to collect revaluation marks or regular/arrear marks.
 
-- **Marks Analyer**: A tool that generates result analysis based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This tool can update the old marks with the new revaluation marks (if any) and provide an updated analysis.
+- **Marks Analyer**: A tool that generates result analysis and calculates SGPA based on the data collected by the scraper and saves it in an Excel file. It also provides a graphical representation of subject performance in the form of an image file. This tool can update the old marks with the new revaluation marks (if any) and provide an updated analysis.
 
 The repository provides both the source code and a packaged release for ease of use.
 
 ## Features
 
-- Collects marks data for all students of a branch from the VTU website.
+- Collects marks data for all or specific students of a branch from the VTU website.
 - Supports automation using Selenium WebDriver.
 - **Handles the USN entry and CAPTCHA verification automatically.**
 - Processes the collected data to generate an Excel file.
+- Calculates SGPA for each student.
 - Provides an easy-to-use graphical-user interface (GUI) app through Tkinter.
 - Handles common errors. While collecting data, if the number of retries crosses the set limit due to any errors, the data collected till that point will be saved.
 
@@ -60,7 +61,7 @@ python "main.py"
     <img src="images\scraper.png" width="400">
 </p>
 
-6. Enter the required information, such as the first USN, last USN, current semester, etc.
+6. Enter the required information. The second field can accept entries like `1-100` (1 to 100), `1,2,3` (1, 2, and 3 only), or even a combination of both `1-10,13,15,20-30` (1 to 10, then 13 and 15, and then 20 to 30).
 
 7. Click "Verify" to verify the input. If the entered data is valid, you can click "Collect". You will be asked whether you want to look at the automation process or not.
 
@@ -70,13 +71,15 @@ python "main.py"
 
 10. If you wish, you can continue to gather data for other branches or simply stop. (You can also gather data in segments for the same branch and use the analyzer app to merge all the segments to create the final analysis report.)
 
+- To help in calculating the SGPA, another CSV file called `Credit Info` will be saved in the same folder. Before doing the analysis, make sure to open the file, fill in the credits in the second column for the courses mentioned, and save the file. If you do not wish to calculate the SGPA, this step can be skipped.
+
 <p align="center">
     <img src="images\analyzer.png" width="400">
 </p>
 
 11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
-12. Select "Browse" and choose the saved raw CSV files that hold the marks data of regular marks, arrear marks, and revaluation marks (if any). Selecting files containing regular marks is compulsory.
+12. Select "Browse" and choose the saved raw CSV files that hold the marks data of regular marks, arrear marks, revaluation marks (if any), and the credit info file. Selecting files containing regular marks is compulsory.
 
 13. Click on "Analyze" and do as instructed. This will generate an Excel file with the marks and their analysis (check the different sheets in the Excel workbook) in the selected folder.
 
