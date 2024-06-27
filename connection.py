@@ -49,10 +49,15 @@ class Connection:
         self.driver.find_element(By.ID, 'submit').click()
 
     def get_info(self, soup_dict):
-        student_name = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
-        student_usn = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[2]/div/div/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
+        # #XPath changed 27-06-2024
+        # student_name = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[1]/div/div[2]/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
+        # #XPath changed 27-06-2024
+        # student_usn = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[1]/div/div[2]/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
 
         soup = BeautifulSoup(self.driver.page_source, 'lxml')
+
+        student_usn = soup.find_all('td')[1].text.split(':')[1].strip().upper()
+        student_name = soup.find_all('td')[3].text.split(':')[1].strip()
 
         soup_dict[f'{student_usn}+{student_name}'] = soup
 
