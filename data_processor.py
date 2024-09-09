@@ -252,7 +252,7 @@ class DataProcessor():
                     grade = None
 
                     if isinstance(score, str):
-                        return score
+                        return np.nan
 
                     if score >= 90:
                         grade = 10

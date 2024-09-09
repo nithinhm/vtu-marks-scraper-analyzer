@@ -361,6 +361,7 @@ class ScraperFrame(TemplateWindow):
                             continue
                         else:
                             conn_support.captcha_submit(captcha_text)
+                            conn_support.sleep(0.01)
                         
                         self.soup_dict = conn_support.get_info(self.soup_dict)
 

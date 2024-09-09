@@ -32,9 +32,9 @@ class Connection:
         self.driver.find_element(By.NAME, 'lns').send_keys(usn)
 
     def get_captcha(self):
-        captcha_image = self.driver.find_element(By.XPATH, '//*[@id="raj"]/div[2]/div[2]/img').screenshot_as_png
+        captcha_image = self.driver.find_element(By.CSS_SELECTOR, '[alt="CAPTCHA code"]').screenshot_as_png
 
-        text = None
+        text = ''
         error = False
 
         try:
@@ -54,12 +54,15 @@ class Connection:
         # #XPath changed 27-06-2024
         # student_usn = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[1]/div/div[2]/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
 
-        soup = BeautifulSoup(self.driver.page_source, 'lxml')
+        td_elements = self.driver.find_elements(By.TAG_NAME, 'td')
 
-        student_usn = soup.find_all('td')[1].text.split(':')[1].strip().upper()
-        student_name = soup.find_all('td')[3].text.split(':')[1].strip()
+        # student_usn = soup.find_all('td')[1].text.split(':')[1].strip().upper()
+        # student_name = soup.find_all('td')[3].text.split(':')[1].strip()
 
-        soup_dict[f'{student_usn}+{student_name}'] = soup
+        student_usn = td_elements[1].text.split(':')[1].strip().upper()
+        student_name = td_elements[3].text.split(':')[1].strip()
+
+        soup_dict[f'{student_usn}+{student_name}'] = BeautifulSoup(self.driver.page_source, 'lxml')
 
         return soup_dict
 

@@ -16,15 +16,13 @@ pytesseract.pytesseract.tesseract_cmd = resource_path(r"Tesseract-OCR\tesseract.
 
 
 class CaptchaHandler:
-    pixel_range = [(i, i, i) for i in range(102, 130)]
+    pixel_range = [(i, i, i) for i in range(100, 160)]
 
     def get_captcha_from_image(self, target_image):
         image_data = BytesIO(target_image)
 
         image = Image.open(image_data)
         width, height = image.size
-
-        image = image.convert("RGB")
 
         white_image = Image.new("RGB", (width, height), "white")
 
