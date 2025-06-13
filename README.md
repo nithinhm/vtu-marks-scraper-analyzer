@@ -67,17 +67,17 @@ python "main.py"
 
 8. Next, sit back and relax while the tool collects the marks data for the specified students. (You could also abort the collection process by clicking "Abort." Data collected till that point, if any, will be saved.)
 
-9. Once the process is complete, you will be asked to select a folder in which to save the collected marks data. Once the folder is selected, the data will be saved in it as a raw CSV file(s) within the appropriate subfolder(s) (regular and arrear marks data will be in seperate folders). Make sure to not change the names of the downloaded files.
+9. Once the process is complete, you will be asked to select a folder in which to save the collected marks data. Once the folder is selected, the data will be saved in it as a raw CSV file(s) (regular and arrear, if any). Make sure to not change the names of the downloaded files.
 
 10. If you wish, you can continue to gather data for other branches or simply stop. (You can also gather data in segments for the same branch and use the analyzer app to merge all the segments to create the final analysis report.)
 
 - To help in calculating the SGPA, another CSV file called `Credit Info` will be saved in the same folder. Before doing the analysis, make sure to open the file, fill in the credits in the second column for the courses mentioned, and save the file. If you do not wish to calculate the SGPA, this step can be skipped.
 
+11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
+
 <p align="center">
     <img src="images\analyzer.png" width="400">
 </p>
-
-11. After you have collected the data for all the students from a branch, close the scraper window. The main window reappears. Click the `Marks Analyzer` button. The analyzer app will open.
 
 12. Select "Browse" and choose the saved raw CSV files that hold the marks data of regular marks, arrear marks, revaluation marks (if any), and the credit info file. Selecting files containing regular marks is compulsory.
 
