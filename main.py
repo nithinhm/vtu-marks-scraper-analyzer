@@ -371,7 +371,7 @@ class ScraperFrame(TemplateWindow):
                         self.frame.status.progress.config(value=(i + 1)/total_usns*100)
 
                         conn_support.sleep(2)
-                        conn_support.driver.back()
+                        conn_support.driver.get(self.url_value)
 
                         break    
                                     
