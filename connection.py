@@ -49,22 +49,17 @@ class Connection:
         self.driver.find_element(By.ID, 'submit').click()
 
     def get_info(self, soup_dict):
-        # #XPath changed 27-06-2024
-        # student_name = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[1]/div/div[2]/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[1]/td[2]').text.split(':')[1].strip()
-        # #XPath changed 27-06-2024
-        # student_usn = self.driver.find_element(By.XPATH,'//*[@id="dataPrint"]/div[1]/div/div[2]/div[2]/div[1]/div/div/div[1]/div/table/tbody/tr[2]/td[2]').text.split(':')[1].strip()
+        error = False
+        # #XPath changed 27-05-2026
+        try:
+            student_name = self.driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[2]/div/div/div[2]/div/div/div[1]/div/div/div/div[2]/div[2]').text.strip().upper()
+            student_usn = self.driver.find_element(By.XPATH,'/html/body/div[2]/div[2]/div[2]/div/div/div[2]/div/div/div[1]/div/div/div/div[1]/div[2]').text.strip().upper()
+        except NoSuchElementException:
+            error = True
+        else:
+            soup_dict[f'{student_usn}+{student_name}'] = BeautifulSoup(self.driver.page_source, 'lxml')
 
-        td_elements = self.driver.find_elements(By.TAG_NAME, 'td')
-
-        # student_usn = soup.find_all('td')[1].text.split(':')[1].strip().upper()
-        # student_name = soup.find_all('td')[3].text.split(':')[1].strip()
-
-        student_usn = td_elements[1].text.split(':')[1].strip().upper()
-        student_name = td_elements[3].text.split(':')[1].strip()
-
-        soup_dict[f'{student_usn}+{student_name}'] = BeautifulSoup(self.driver.page_source, 'lxml')
-
-        return soup_dict
+        return soup_dict, error
 
     def sleep(self, secs):
         time.sleep(secs)

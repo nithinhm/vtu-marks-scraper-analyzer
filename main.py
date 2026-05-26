@@ -86,7 +86,7 @@ class ScraperFrame(TemplateWindow):
                                                                            /_/                       /_/   /_/       
     '''
 
-    default_entry_values = ['1AM23CS', '1-100', '1', '5', '5', 'https://results.vtu.ac.in/DJcbcs24/index.php']
+    default_entry_values = ['1AM22CS', '1-10', '1', '5', '5', 'https://results.vtu.ac.in/MJ26cbcs/index.php']
 
     to_abort = None
 
@@ -350,9 +350,8 @@ class ScraperFrame(TemplateWindow):
                         this_retry = 0
 
                         captcha_text, error = conn_support.get_captcha()
-
                         if error:
-                            self.status_update('Error! Tesseract not configured. Retry after configuring.')
+                            messagebox.showerror(title='Tesseract Error', message='Tesseract not configured.\nRetry after configuring.')
                             self.to_abort = True
                             break
                         elif len(captcha_text) != 6:
@@ -361,9 +360,13 @@ class ScraperFrame(TemplateWindow):
                             continue
                         else:
                             conn_support.captcha_submit(captcha_text)
-                            conn_support.sleep(0.01)
+                            conn_support.sleep(0.1)
                         
-                        self.soup_dict = conn_support.get_info(self.soup_dict)
+                        self.soup_dict, error = conn_support.get_info(self.soup_dict)
+                        if error:
+                            messagebox.showerror(title='Outdated code', message='The website code has been updated.\nThe scraper code also needs to be updated.')
+                            self.to_abort = True
+                            break
 
                         self.status_update(f'Data successsfully collected for {usn}\n')
                         cool_counter = 0
@@ -417,7 +420,7 @@ class ScraperFrame(TemplateWindow):
 
                 else:
                     if self.to_abort:
-                        self.status_update('ABORTED\n')
+                        self.status_update('ABORTED\nWait a moment...\n')
                         self.to_abort = False
                         break
                     else:

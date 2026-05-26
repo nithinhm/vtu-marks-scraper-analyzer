@@ -10,7 +10,7 @@ class TemplateWindow(Tk):
         self.my_credit = ttk.Frame(self)
         self.my_credit.pack(side='bottom', pady=10)
 
-        self.credit_label = ttk.Label(self.my_credit, font=('Segoe UI', 8), text='\nApp developed by\nProf. Nithin H M\nAssistant Professor\nDepartment of Physics\nAMC Engineering College\nBangalore - 560083', justify='center')
+        self.credit_label = ttk.Label(self.my_credit, font=('Segoe UI', 8), text='\nDeveloped and maintained by Nithin H M', justify='center')
         self.credit_label.pack()
 
         self.gitlink = ttk.Label(self.my_credit, text="My GitHub", foreground="blue", cursor="hand2")
@@ -20,6 +20,9 @@ class TemplateWindow(Tk):
         self.dinlink = ttk.Label(self.my_credit, text="My LinkedIn", foreground="blue", cursor="hand2")
         self.dinlink.pack()
         self.dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
+
+        self.version_label = ttk.Label(self.my_credit, font=('Segoe UI', 8), text='Version: 2.7.7\nUpdated: 2026-27-05', justify='center')
+        self.version_label.pack()
 
     def create_frame(self):
         pass
