@@ -318,7 +318,7 @@ class DataProcessor():
                 self.sgpa = True
                 self.sgpa_report = sgpa_report
 
-        overall_column = full_data[full_data.iloc[:,4::4].columns].replace('-', 0).fillna(0).astype(int).sum(axis=1)
+        overall_column = full_data[full_data.iloc[:,4::4].columns].replace({'-':0, 'W':0}).fillna(0).astype(int).sum(axis=1)
         temp_df = full_data.iloc[:,5::4].apply(lambda x: x.value_counts(), axis=1).fillna(0).astype(int)
 
         result_cases = ['A', 'P', 'F', 'W', 'X']
@@ -347,7 +347,7 @@ class DataProcessor():
 
         result_df = result_df.rename(columns={'A': 'Absent', 'P':'Passed', 'F':'Failed', 'X':'Not Eligible', 'W':'Withheld'})
 
-        result_df['Eligible and Appeared'] = result_df.fillna(0).apply(lambda x: x['Passed'] + x['Failed'], axis=1)
+        result_df['Eligible and Appeared'] = result_df.fillna(0).apply(lambda x: x['Passed'] + x['Failed'] + x['Withheld'], axis=1)
 
         pass_percentage_column = result_df.fillna(0).apply(lambda x: round(x['Passed']/x['Eligible and Appeared']*100, 2), axis=1)
         result_df['Subject Pass Percentage'] = pass_percentage_column
