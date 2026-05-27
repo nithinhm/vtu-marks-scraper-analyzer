@@ -21,7 +21,7 @@ class TemplateWindow(Tk):
         self.dinlink.pack()
         self.dinlink.bind("<Button-1>", lambda e: webbrowser.open_new("https://linkedin.com/in/nithinhm13"))
 
-        self.version_label = ttk.Label(self.my_credit, font=('Segoe UI', 8), text='Version: 2.7.7\nUpdated: 2026-27-05', justify='center')
+        self.version_label = ttk.Label(self.my_credit, font=('Segoe UI', 8), text='Version: 2.7.8\nUpdated: 2026-05-28', justify='center')
         self.version_label.pack()
 
     def create_frame(self):
